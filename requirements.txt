@@ -1,0 +1,2 @@
+ujson==1.35
+qumulo-api==2.7.11
