@@ -20,12 +20,13 @@ API_USER = ""
 API_PASSWORD = ""
 START_DIR = "/"
 CLUSTER_IPS = []
+OUT_FW = open("file-tree-output.txt", "w")
 
 
-def worker(q, fw, val, lock, inode_count, dir_count):
-    ip = random.choice(CLUSTER_IPS)
+def worker(q, val, lock, inode_count, dir_count, cluster_ips, api_user, api_pass):
+    ip = random.choice(cluster_ips)
     rc = RestClient(ip, 8000)
-    creds = rc.login(API_USER, API_PASSWORD)
+    creds = rc.login(api_user, api_pass)
     ses = requests.Session()
     headers = {"Authorization": "Bearer %s" % str(creds.bearer_token)}
     ses.headers.update(headers)
@@ -37,8 +38,8 @@ def worker(q, fw, val, lock, inode_count, dir_count):
             val.value -= 1
             inode_count.value += ret_data["inode_count"]
             dir_count.value += 1
-            fw.write('\n'.join(ret_data["rows"]))
-
+            OUT_FW.write('\n'.join(ret_data["rows"]))
+        time.sleep(1)
 
 def read_dir(ip, ses, q, val, lock, path):
     inode_count = 0
@@ -93,8 +94,6 @@ if __name__ == '__main__':
     API_USER = args.user
     API_PASSWORD = args.password
 
-    fw = open("file-tree-output.txt", "w")
-
     start_time = time.time()
     q = multiprocessing.Queue()
     q_len = multiprocessing.Value('i', 0)
@@ -115,7 +114,7 @@ if __name__ == '__main__':
     last_inode_count = inode_count.value
     last_dir_count = dir_count.value 
 
-    pool = multiprocessing.Pool(40, worker,(q, fw, q_len, q_lock, inode_count, dir_count))
+    pool = multiprocessing.Pool(40, worker, (q, q_len, q_lock, inode_count, dir_count, CLUSTER_IPS, API_USER, API_PASSWORD))
 
     add_to_q(q, q_len, q_lock, args.dir)
 
@@ -132,6 +131,6 @@ if __name__ == '__main__':
         time.sleep(sleep_time)
 
     total_time = time.time() - start_time
-    fw.close()
+    OUT_FW.close()
     print("processed %s inodes per second" % (int(inode_count.value / total_time),))
     print("processed %s dirs per second" % (int(dir_count.value / total_time),))
