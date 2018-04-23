@@ -12,12 +12,13 @@ from qumulo.rest_client import RestClient
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings()
 
 # paralleliziation across nodes didn't help as this was client-bound
 CLUSTER = ""
 API_USER = ""
 API_PASSWORD = ""
-START_DIR = "2"
+START_DIR = "/"
 CLUSTER_IPS = []
 
 
@@ -85,6 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--host', required=True, help='Qumulo host')
     parser.add_argument('--user', required=True, help='Qumulo api user')
     parser.add_argument('--password', required=True, help='Qumulo api password')
+    parser.add_argument('--dir', required=False, help='Starting directory', default=START_DIR)
 
     args = parser.parse_args()
     CLUSTER = args.host
@@ -115,7 +117,7 @@ if __name__ == '__main__':
 
     pool = multiprocessing.Pool(40, worker,(q, fw, q_len, q_lock, inode_count, dir_count))
 
-    add_to_q(q, q_len, q_lock, START_DIR)
+    add_to_q(q, q_len, q_lock, args.dir)
 
     sleep_time = 8
     while q_len.value > 0:
