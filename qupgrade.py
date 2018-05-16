@@ -65,6 +65,11 @@ def move_from_box_to_qumulo(qs):
                 data = {"password": qs.box_password})
     rx = r',"id":([0-9]+).*?Qumulo Core ([0-9.]+)'
 
+    if rsp.status_code == 403:
+        log_print("Box share password incorrect")
+        print("Please contact care@qumulo.com or check in " + \
+              "Qumulo's Slack channel for the Box password.")
+        sys.exit()
     upgrade_verified = OrderedDict()
     for m in re.findall(rx, rsp.text):
         # Create a release list based on intersection of Box & user list.
