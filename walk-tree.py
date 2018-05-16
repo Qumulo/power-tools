@@ -20,7 +20,7 @@ API_USER = ""
 API_PASSWORD = ""
 START_DIR = "/"
 CLUSTER_IPS = []
-OUT_FW = open("file-tree-output.txt", "w")
+OUT_FW = open("file-tree-output.txt", "wb")
 
 
 def worker(q, val, lock, inode_count, dir_count, cluster_ips, api_user, api_pass):
@@ -70,7 +70,8 @@ def read_dir(ip, ses, q, val, lock, path):
         #          datablocks: 0
         #           num_links: 2
         #         child_count: 1
-        rows.append("%(path)s\t%(size)s" % d)
+        row = "%(path)s\t%(size)s" % d
+        rows.append(row.encode("UTF-8"))
         if d['type'] == "FS_FILE_TYPE_DIRECTORY":
             add_to_q(q, val, lock, d['id'])
     return {"inode_count": inode_count, "rows": rows}
