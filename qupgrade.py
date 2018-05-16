@@ -45,7 +45,7 @@ class QSettings(object):
 
 
 def version_num(vers):
-    p1, p2, p3 = map(int, vers.split('.'))
+    p1, p2, p3 = map(int, vers.split('.')[:3])
     return p1 * 10000 + p2 * 100 + p3
 
 
@@ -185,12 +185,12 @@ def move_from_box_to_qumulo(qs):
 def upgrade_cluster():
     qs = QSettings()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--qhost', required=True)
-    parser.add_argument('--quser', required=True)
-    parser.add_argument('--qpass', required=True)
-    parser.add_argument('--qpath', default='upgrade')
-    parser.add_argument('--sharepass')
-    parser.add_argument('--vers', nargs="+", required=True)
+    parser.add_argument('--qhost', required=True, help='Qumulo hostname or ip address')
+    parser.add_argument('--quser', required=True, help='Qumulo API user')
+    parser.add_argument('--qpass', required=True, help='Qumulo API password')
+    parser.add_argument('--qpath', default='upgrade', help='Root-based path to install/find the upgrade qimg file on the cluster')
+    parser.add_argument('--sharepass', help='Box share password. Contact Qumulo for details')
+    parser.add_argument('--vers', nargs="+", required=True, help='Comma-separated list of versions to upgrade through')
     args = parser.parse_args()
     if ',' in args.vers[0]:
         args.vers = args.vers[0].split(',')
