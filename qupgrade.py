@@ -41,6 +41,7 @@ class QSettings(object):
     box_password = None
     rc = None
     start_vers = None
+    download_only = None
     release_list = OrderedDict()
 
 
@@ -191,6 +192,7 @@ def upgrade_cluster():
     parser.add_argument('--qpath', default='upgrade', help='Root-based path to install/find the upgrade qimg file on the cluster')
     parser.add_argument('--sharepass', help='Box share password. Contact Qumulo for details')
     parser.add_argument('--vers', nargs="+", required=True, help='Comma-separated list of versions to upgrade through')
+    parser.add_argument('--download-only', default=False, help='Do not run upgrades, only download qimgs from box', action='store_true')
     args = parser.parse_args()
     if ',' in args.vers[0]:
         args.vers = args.vers[0].split(',')
@@ -206,6 +208,7 @@ def upgrade_cluster():
     qs.password       = args.qpass
     qs.upgrade_path   = args.qpath
     qs.box_password   = args.sharepass
+    qs.download_only  = args.download_only
 
     for vers_id in sorted(qs.versions, key=lambda s: map(int, s.split('.'))):
         qs.release_list[vers_id] = {"version_id": vers_id,
@@ -240,6 +243,10 @@ def upgrade_cluster():
 
     if qs.box_password is not None:
         move_from_box_to_qumulo(qs)
+
+    if qs.download_only:
+        print("Exiting before upgrade as --download-only was specified")
+        sys.exit()
 
     ####  loop through releases and upgrade the cluster serially
     for vers_id, rel in qs.release_list.iteritems():
