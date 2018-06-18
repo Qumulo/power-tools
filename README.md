@@ -23,7 +23,8 @@ Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 This script downloads software from Box, loads it onto your Qumulo clusters, and upgrades the Qumulo cluster via the API.
 
 ### Usage
-* Script must be run from a client machine. Cannot be run directly on a Qumulo cluster due to reboots.
+* Script must be run from a MacOSX or linux client machine. Cannot be run directly on a Qumulo cluster due to reboots.
+* For dot versions (like 2.8.2.1), please simply specify 2.8.2 in the versions list.
 
 Upgrade to version 2.8.2 from 2.8.1
 
