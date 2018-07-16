@@ -92,7 +92,7 @@ def move_from_box_to_qumulo(qs):
         log_print("Get release details from Box for: %s" % version_id)
         folder_url = "https://qumulo.app.box.com/v/releases/folder/%s"
         rsp = s.get(folder_url % release['folder_id'])
-        qimg_rx = r',"id":([0-9]+)[^\{\}]*?,"name":"([^\"]+.qimg)"'
+        qimg_rx = r',"id":([0-9]+)[^\{\}]*?,"name":"qumulo_core([^\"]+.qimg)"'
         ms = re.findall(qimg_rx, rsp.text)
         m = ms[0]
         release['qimg'] = m[1].strip()
