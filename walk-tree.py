@@ -42,7 +42,7 @@ def worker(q, val, lock, inode_count, dir_count, cluster_ips, api_user, api_pass
             OUT_FW.write('\n')
             if dir_count.value % 100 == 0:
                 OUT_FW.flush()
-        time.sleep(1)
+        time.sleep(0.01)
 
 def read_dir(ip, ses, q, val, lock, path):
     inode_count = 0
