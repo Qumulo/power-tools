@@ -37,3 +37,13 @@ Upgrade from 2.8.0 to 2.8.1 and then 2.8.2
 Upgrade to 2.8.2 without downloading from Box. The qimg file must exist in /upgrade on the cluster
 
 `python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.8.2`
+
+
+## Copy settings from one Qumulo cluster to another
+
+This script copies NFS exports, SMB shares, local users/groups, vpn, and MissionQontrol settings from one Qumulo cluster to another.
+
+### Usage
+
+Copy settings from qumulo1 to qumulo2
+`copy-settings.py --src_host qumulo1 --src_user admin --src_pass 555if234 --dest_host qumulo2 --dest_user admin --dest_pass 234sdf235`
