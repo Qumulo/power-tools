@@ -40,43 +40,51 @@ def worker(q, val, lock, inode_count, dir_count, cluster_ips, api_user, api_pass
             dir_count.value += 1
             OUT_FW.write('\n'.join(ret_data["rows"]))
             OUT_FW.write('\n')
-            if dir_count.value % 100 == 0:
-                OUT_FW.flush()
+            OUT_FW.flush()
         time.sleep(0.01)
 
 def read_dir(ip, ses, q, val, lock, path):
     inode_count = 0
     url = 'https://%s:8000/v1/files/%s/entries/?limit=1000000' % (ip, urllib.quote_plus(path))
     resp = ses.get(url, verify=False)
-    items = ujson.loads(resp.text)['files']
+    obj = ujson.loads(resp.text)
     rows = []
-    for d in items:
-        inode_count += 1
-        # Attributes that might be interesting:
-        #                  id: 575005817
-        #                name: geos
-        #                path: /geos/
-        #                size: 512
-        #               owner: 12884901888
-        #               group: 17179869184
-        #                type: FS_FILE_TYPE_DIRECTORY
-        # symlink_target_type: FS_FILE_TYPE_UNKNOWN
-        #       creation_time: 2017-11-17T04:38:22.19858697Z
-        #   modification_time: 2017-11-17T05:13:59.59775965Z
-        #         change_time: 2017-11-17T05:13:59.59775965Z
-        #                mode: 0755
-        #       owner_details: {u'id_type': u'NFS_UID', u'id_value': u'0'}
-        #       group_details: {u'id_type': u'NFS_GID', u'id_value': u'0'}
-        # extended_attributes: {u'read_only': False, u'temporary': False, u'system': False, u'compressed': False, u'not_content_indexed': False, u'hidden': False, u'archive': False}
-        #              blocks: 1
-        #          metablocks: 1
-        #          datablocks: 0
-        #           num_links: 2
-        #         child_count: 1
-        row = "%(path)s\t%(size)s" % d
-        rows.append(row.encode("UTF-8"))
-        if d['type'] == "FS_FILE_TYPE_DIRECTORY":
-            add_to_q(q, val, lock, d['id'])
+    while 'files' in obj:
+        items = obj['files']
+        for d in items:
+            inode_count += 1
+            # Attributes that might be interesting:
+            #                  id: 575005817
+            #                name: geos
+            #                path: /geos/
+            #                size: 512
+            #               owner: 12884901888
+            #               group: 17179869184
+            #                type: FS_FILE_TYPE_DIRECTORY
+            # symlink_target_type: FS_FILE_TYPE_UNKNOWN
+            #       creation_time: 2017-11-17T04:38:22.19858697Z
+            #   modification_time: 2017-11-17T05:13:59.59775965Z
+            #         change_time: 2017-11-17T05:13:59.59775965Z
+            #                mode: 0755
+            #       owner_details: {u'id_type': u'NFS_UID', u'id_value': u'0'}
+            #       group_details: {u'id_type': u'NFS_GID', u'id_value': u'0'}
+            # extended_attributes: {u'read_only': False, u'temporary': False, u'system': False, u'compressed': False, u'not_content_indexed': False, u'hidden': False, u'archive': False}
+            #              blocks: 1
+            #          metablocks: 1
+            #          datablocks: 0
+            #           num_links: 2
+            #         child_count: 1
+            row = "%(path)s\t%(size)s" % d
+            rows.append(row.encode("UTF-8"))
+            if d['type'] == "FS_FILE_TYPE_DIRECTORY":
+                add_to_q(q, val, lock, d['id'])
+        if 'next' in obj['paging']:
+            url = 'https://%s:8000%s' % (ip, obj['paging']['next'])
+            resp = ses.get(url, verify=False)
+            obj = ujson.loads(resp.text)
+        else:
+            break
+
     return {"inode_count": inode_count, "rows": rows}
 
 
