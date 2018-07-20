@@ -164,13 +164,15 @@ def add_smb_share(dest, share):
             msg = "Error: %s" % excpt
 
         print msg
+
 def add_group(dest, group):
     try:
         qumulo.rest.groups.add_group(
             dest[0],
             dest[1],
             group['name'],
-            group['gid'])
+            group['gid']
+            )
     except qumulo.lib.request.RequestError, excpt:
         if (excpt.status_code == 409):
             msg = "Group '" + group['name'] + "' already exists on destination..."
@@ -178,6 +180,7 @@ def add_group(dest, group):
             msg = "Error: %s" % excpt
 
         print msg
+
 def add_user(dest, user):
     try:
         qumulo.rest.users.add_user(
@@ -185,7 +188,8 @@ def add_user(dest, user):
             dest[1],
             user['name'],
             user['primary_group'],
-            user['uid'])
+            user['uid']
+            )
     except qumulo.lib.request.RequestError, excpt:
         if (excpt.status_code == 409):
             msg = "User '" + user['name'] + "' already exists on destination..."
