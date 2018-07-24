@@ -31,7 +31,6 @@ from collections import OrderedDict
 
 RELEASES_URL = 'https://qumulo.app.box.com/v/releases'
 
-
 class QSettings(object):
     versions = None
     host = None
@@ -62,17 +61,22 @@ def move_from_box_to_qumulo(qs):
     ####    Get list of releases folders from Box  ####
     log_print("Get list of releases from Box")
     rsp = s.get(RELEASES_URL)
-    rsp = s.post(RELEASES_URL,
-                data = {"password": qs.box_password})
-    rx = r',"id":([0-9]+).*?Qumulo Core ([0-9.]+)'
-
+    rsp = s.post(RELEASES_URL, data = {"password": qs.box_password})
     if rsp.status_code == 403:
         log_print("Box share password incorrect")
         print("Please contact care@qumulo.com or check in " + \
               "Qumulo's Slack channel for the Box password.")
         sys.exit()
+
+    txt = rsp.text
+    ms = re.search(r'pageCount":([0-9]+)', rsp.text)
+    for p in range(2, int(ms.groups(1)[0])+1):
+        rsp = s.get(RELEASES_URL + "?page=" + str(p))
+        txt += rsp.text
+
     upgrade_verified = OrderedDict()
-    for m in re.findall(rx, rsp.text):
+    rx = r',"id":([0-9]+).*?Qumulo Core ([0-9.]+)'
+    for m in re.findall(rx, txt):
         # Create a release list based on intersection of Box & user list.
         if m[1] in qs.release_list:
             upgrade_verified[str(m[1])] = 1
@@ -92,7 +96,7 @@ def move_from_box_to_qumulo(qs):
         log_print("Get release details from Box for: %s" % version_id)
         folder_url = "https://qumulo.app.box.com/v/releases/folder/%s"
         rsp = s.get(folder_url % release['folder_id'])
-        qimg_rx = r',"id":([0-9]+)[^\{\}]*?,"name":"qumulo_core([^\"]+.qimg)"'
+        qimg_rx = r',"id":([0-9]+)[^\{\}]*?,"name":"(qumulo_core[^\"]+.qimg)"'
         ms = re.findall(qimg_rx, rsp.text)
         m = ms[0]
         release['qimg'] = m[1].strip()
