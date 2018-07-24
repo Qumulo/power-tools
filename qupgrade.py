@@ -201,7 +201,13 @@ def upgrade_cluster():
     if ',' in args.vers[0]:
         args.vers = args.vers[0].split(',')
     for v in args.vers:
-        if not re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', v):
+        if re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', v):
+            # this is a valid qumulo version
+            pass
+        elif re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', v):
+            # this is a valid qumulo version
+            pass
+        else:
             log_print("Exiting")
             print("'%s' is not a valid Qumulo version" % v)
             sys.exit()
@@ -215,6 +221,7 @@ def upgrade_cluster():
     qs.download_only  = args.download_only
 
     for vers_id in sorted(qs.versions, key=lambda s: map(int, s.split('.'))):
+        vers_id = re.sub(r'([0-9]+[.][0-9]+[.][0-9]+).*', r'\g<1>', vers_id)
         qs.release_list[vers_id] = {"version_id": vers_id,
                                     "qimg": "qumulo_core_%s.qimg" % vers_id,
                                     "version_num": version_num(vers_id)}
