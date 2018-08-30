@@ -20,23 +20,26 @@ Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 
 ## Upgrade a Qumulo cluster
 
-This script downloads software from Box, loads it onto your Qumulo clusters, and upgrades the Qumulo cluster via the API.
+This script downloads Qumulo software, loads it onto a Qumulo cluster, and upgrades the Qumulo cluster via the API.
 
 ### Usage
-* Script must be run from a MacOSX or linux client machine. Cannot be run directly on a Qumulo cluster due to reboots.
-* For dot versions (like 2.8.2.1), please simply specify 2.8.2 in the versions list.
+* Script must be run from a MacOSX or linux client machine. It cannot be run directly on a Qumulo cluster due to reboots.
 
-Upgrade to version 2.8.2 from 2.8.1
+Prepare for an upgrade by *only* downloading the qimg(s) to the Qumulo cluster
 
-`python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers 2.8.2`
+`python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest --download-only`
 
-Upgrade from 2.8.0 to 2.8.1 and then 2.8.2
+Upgrade the latest build
 
-`python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers 2.8.1,2.8.2`
+`python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest`
 
-Upgrade to 2.8.2 without downloading from Box. The qimg file must exist in /upgrade on the cluster
+Upgrade from an older build to a not-quite latest build (2.9.0)
 
-`python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.8.2`
+`python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers 2.9.0`
+
+Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on Qumulo and properly named
+
+`python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.9.0`
 
 
 ## Copy settings from one Qumulo cluster to another

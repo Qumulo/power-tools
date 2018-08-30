@@ -28,79 +28,64 @@ import time
 import json
 from collections import OrderedDict
 
+TRENDS_DOMAIN = "https://trends.qumulo.com"
 
-RELEASES_URL = 'https://qumulo.app.box.com/v/releases'
 
 class QSettings(object):
-    versions = None
     host = None
     user = None
     password = None
     upgrade_path = None
-    box_password = None
+    sharepass = None
     rc = None
-    start_vers = None
     download_only = None
-    release_list = OrderedDict()
+    current_version = None
+    to_version = None
 
 
 def version_num(vers):
     p1, p2, p3 = map(int, vers.split('.')[:3])
     return p1 * 10000 + p2 * 100 + p3
 
+def version_short(vers):
+    p1, p2, p3 = vers.split('.')[:3]
+    return p1 + "." + p2  + "." + p3
 
 def log_print(msg):
     print("%s: %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg))
 
+def get_upgrade_list(qs = None):
+    r = requests.get(TRENDS_DOMAIN + "/data/upgrade/versions/")
+    releases = json.loads(r.text)
+    if qs is None:
+        return releases
+    download_versions = []
+    skipto = None
+    for release in releases:
+        if version_num(release["version"]) > version_num(qs.current_version) and \
+            version_num(release["version"]) <= version_num(qs.to_version):
+            if "skipto" in release:
+                skipto = release["skipto"]
+            if skipto == None:
+                download_versions.append(release)
+            elif skipto == release["version"]:
+                download_versions.append(release)
+                skipto = None
+    return download_versions
 
-def move_from_box_to_qumulo(qs):
-    ####    Set up the Box download web client     ####
-    log_print("Set up Box client")
-    s = requests.Session()
+def download_from_trends(qs):
+    ####    Get list of releases  ####
+    r = requests.get(TRENDS_DOMAIN + "/data/upgrade/versions/")
+    releases = json.loads(r.text)
 
-    ####    Get list of releases folders from Box  ####
-    log_print("Get list of releases from Box")
-    rsp = s.get(RELEASES_URL)
-    rsp = s.post(RELEASES_URL, data = {"password": qs.box_password})
-    if rsp.status_code == 403:
-        log_print("Box share password incorrect")
-        print("Please contact care@qumulo.com or check in " + \
-              "Qumulo's Slack channel for the Box password.")
+    release_exists = False
+    for release in releases:
+        if release["version"] == qs.to_version:
+            release_exists = True
+    if not release_exists:
+        log_print("Desired release %s does not exist." % qs.to_version)
+        print("Please correct the upgrade version")
         sys.exit()
-
-    txt = rsp.text
-    ms = re.search(r'pageCount":([0-9]+)', rsp.text)
-    for p in range(2, int(ms.groups(1)[0])+1):
-        rsp = s.get(RELEASES_URL + "?page=" + str(p))
-        txt += rsp.text
-
-    upgrade_verified = OrderedDict()
-    rx = r',"id":([0-9]+).*?Qumulo Core ([0-9.]+)'
-    for m in re.findall(rx, txt):
-        # Create a release list based on intersection of Box & user list.
-        if m[1] in qs.release_list:
-            upgrade_verified[str(m[1])] = 1
-            qs.release_list[m[1]]["folder_id"] = m[0]
-            qs.release_list[m[1]]["version_id"] = m[1]
-
-    if(sorted(upgrade_verified.keys()) != sorted(qs.release_list.keys())):
-        log_print("Desired upgrade list does not " \
-                    "match up with available releases on Box.")
-        log_print("Desired list: %s" % qs.release_list.keys())
-        log_print("Box list:     %s" % upgrade_verified.keys())
-        print("Please correct the upgrade version(s)")
-        sys.exit()
-
-    ####    Get qimg file names and ids from Box    ####
-    for version_id, release in qs.release_list.iteritems():
-        log_print("Get release details from Box for: %s" % version_id)
-        folder_url = "https://qumulo.app.box.com/v/releases/folder/%s"
-        rsp = s.get(folder_url % release['folder_id'])
-        qimg_rx = r',"id":([0-9]+)[^\{\}]*?,"name":"(qumulo_core[^\"]+.qimg)"'
-        ms = re.findall(qimg_rx, rsp.text)
-        m = ms[0]
-        release['qimg'] = m[1].strip()
-        release['file_id'] = m[0]
 
     #### create directory for upgrade qimgs ####
     try:
@@ -112,14 +97,28 @@ def move_from_box_to_qumulo(qs):
                                                 qs.host,
                                                 e))
 
-    ####  loop that downloads file from Box and pushed them to Qumulo
-    for version_id, release in qs.release_list.iteritems():
-        qumulo_qimg = '/' + qs.upgrade_path + '/' + release['qimg']
+    #### get all qimgs from trends to qumulo cluster
+    download_versions = []
+    skipto = None
+    for release in releases:
+        if version_num(release["version"]) > version_num(qs.current_version) and \
+            version_num(release["version"]) <= version_num(qs.to_version):
+            if "skipto" in release:
+                skipto = release["skipto"]
+            if skipto == None:
+                download_versions.append(release)
+            elif skipto == release["version"]:
+                download_versions.append(release)
+                skipto = None
+
+    for rel in download_versions:
+        qimg = 'qumulo_core_%s.qimg' % rel["version"]
+        qumulo_qimg = '/' + qs.upgrade_path + '/' + qimg
         #### check to see if qimg already exists on cluster ####
         file_exists = False
         try:
             attrs = qs.rc.fs.get_attr(path = qumulo_qimg)
-            if int(attrs['size']) > 200000000:
+            if int(attrs['size']) == rel["size"]:
                 file_exists = True
         except:
             e = sys.exc_info()[1]
@@ -128,44 +127,28 @@ def move_from_box_to_qumulo(qs):
             log_print("qimg file is already uploaded: %s" % qumulo_qimg)
             continue
 
-        log_print("Preparing to download release: %s" % release['version_id'])
-        url = "https://qumulo.app.box.com/v/releases/file/%s" % \
-                                                    release['file_id']
-        resp = s.get(url)
-        ms = re.findall("Box.config.requestToken = '([^']+)'", resp.text)
-        post_data = {
-            "fileIDs[]": release['file_id'],
-            "vanityName": "releases",
-            "request_token": ms[0]
-        }
-        log_print("Generate Box API token")
-        url = "https://qumulo.app.box.com/index.php?rm=preview_create_tokens"
-        rsp = s.post(url, data=post_data)
-        js = json.loads(rsp.text)
-
+        log_print("Preparing to download release: %s" % rel["version"])
         try:
             qs.rc.fs.create_file(dir_path='/' + qs.upgrade_path,
-                                        name=release['qimg'])
+                                        name=qimg)
         except:
             e = sys.exc_info()[1]
             log_print("File creation error: %s" % e)
 
-        ####  Only download from Box if a local version of file doesn't exist.
-        if not os.path.exists(release['qimg']):
-            log_print("Begin download of qimg from Box for %s" % \
-                                                    release['version_id'])
-            headers = {"Authorization": "Bearer %s" % js[release['file_id']]}
-            rsp = s.get("https://api.box.com/2.0/files/%s/content" % \
-                            release['file_id'], headers = headers, stream=True)
-            file_size = float(rsp.headers['Content-Length'])
-            log_print("Downloading %s byte qimg from box." % file_size)
+        ####  Only download if a local version of file doesn't exist.
+        if not os.path.exists(qimg):
+            log_print("Begin download of qimg: %s" % \
+                                                    rel["version"])
+            file_size = rel["size"]
+            log_print("Downloading %s byte qimg: %s" % (file_size, rel["version"]))
+            rsp = requests.get(TRENDS_DOMAIN + "/data/upgrade/version/%s?access_code=%s" % \
+                            (qimg, qs.sharepass), stream=True)
             status_size = 10.0
             done_count = 0
             percent_complete = [0]*int(status_size)
             downloaded_bytes = 0
-            sys.stdout.write(time.strftime("%Y-%m-%d %H:%M:%S") + ": ")
             sys.stdout.flush()
-            with open(release['qimg'], 'wb') as fw:
+            with open(qimg, 'wb') as fw:
                 for chunk in rsp.iter_content(chunk_size=1024*1024):
                     if chunk: # filter out keep-alive new chunks
                         fw.write(chunk)
@@ -175,16 +158,17 @@ def move_from_box_to_qumulo(qs):
                                                 done_count / status_size \
                             and percent_complete[done_count] == 0:
                             percent_complete[done_count] = 1
-                            sys.stdout.write("%s%%  " % (done_count * 10, ))
-                            sys.stdout.flush()
                             done_count += 1
-            print("")
 
-        log_print("Load qimg file onto Qumulo via API: %s" % release['qimg'])
-        with open(release['qimg'], 'rb') as fr:
-            qs.rc.fs.write_file(path = '/%s/%s' % (qs.upgrade_path,
-                                            release['qimg']), data_file=fr)
-        log_print("Upgrade file ready on Qumulo: %s" % release['qimg'])
+        log_print("Load qimg file onto Qumulo via API: %s" % qimg)
+        with open(qimg, 'rb') as fr:
+            qs.rc.fs.write_file(path = '/%s/%s' % (
+                                            qs.upgrade_path,
+                                            qimg), 
+                                        data_file=fr)
+        log_print("Upgrade file ready on Qumulo: %s" % qimg)
+        log_print("Removing local qimg: %s" % qimg)
+        os.remove(qimg)
 
 
 def upgrade_cluster():
@@ -194,37 +178,31 @@ def upgrade_cluster():
     parser.add_argument('--quser', required=True, help='Qumulo API user')
     parser.add_argument('--qpass', required=True, help='Qumulo API password')
     parser.add_argument('--qpath', default='upgrade', help='Root-based path to install/find the upgrade qimg file on the cluster')
-    parser.add_argument('--sharepass', help='Box share password. Contact Qumulo for details')
-    parser.add_argument('--vers', nargs="+", required=True, help='Comma-separated list of versions to upgrade through')
+    parser.add_argument('--sharepass', help='Share password. Contact Qumulo for details')
+    parser.add_argument('--vers', required=True, help='The version to upgrade to.')
     parser.add_argument('--download-only', default=False, help='Do not run upgrades, only download qimgs from box', action='store_true')
     args = parser.parse_args()
-    if ',' in args.vers[0]:
-        args.vers = args.vers[0].split(',')
-    for v in args.vers:
-        if re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', v):
-            # this is a valid qumulo version
-            pass
-        elif re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', v):
-            # this is a valid qumulo version
-            pass
-        else:
-            log_print("Exiting")
-            print("'%s' is not a valid Qumulo version" % v)
-            sys.exit()
 
-    qs.versions       = args.vers
+    if args.vers == "latest":
+        args.vers = get_upgrade_list()[-1]["version"]
+    elif re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', args.vers):
+        # this is a valid qumulo version
+        pass
+    elif re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', args.vers):
+        # this is a valid qumulo version
+        pass
+    else:
+        log_print("Exiting")
+        print("'%s' is not a valid Qumulo version" % args.vers)
+        sys.exit()
+
+    qs.to_version     = version_short(args.vers)
     qs.host           = args.qhost
     qs.user           = args.quser
     qs.password       = args.qpass
     qs.upgrade_path   = args.qpath
-    qs.box_password   = args.sharepass
+    qs.sharepass      = args.sharepass
     qs.download_only  = args.download_only
-
-    for vers_id in sorted(qs.versions, key=lambda s: map(int, s.split('.'))):
-        vers_id = re.sub(r'([0-9]+[.][0-9]+[.][0-9]+).*', r'\g<1>', vers_id)
-        qs.release_list[vers_id] = {"version_id": vers_id,
-                                    "qimg": "qumulo_core_%s.qimg" % vers_id,
-                                    "version_num": version_num(vers_id)}
 
     ####   Set up the Qumulo REST client
     log_print("Logging into qumulo cluster to begin upgrade process")
@@ -240,35 +218,34 @@ def upgrade_cluster():
         sys.exit()
 
     revision_id = qs.rc.version.version()['revision_id']
-    qs.start_vers = revision_id.replace("Qumulo Core ", "")
+    qs.current_version = version_short(revision_id.replace("Qumulo Core ", ""))
     ####  Make sure our first install build version is greater than the current
-    if not version_num(qs.start_vers) < version_num(qs.release_list.keys()[0]):
+    if version_num(qs.current_version) >= version_num(qs.to_version):
         log_print("!! Error !! Unable to upgrade")
         err_msg = "Can't upgrade to %s as you're " + \
                 "already on or past that release."
-        print(err_msg % qs.release_list.keys()[0])
+        print(err_msg % qs.to_version)
         sys.exit()
-    log_print("Current Qumulo version: %s" % qs.start_vers)
-    log_print("Upgading Qumulo through: %s -> %s" % (qs.start_vers,
-                                                    ' -> '.join(qs.versions)))
-
-    if qs.box_password is not None:
-        move_from_box_to_qumulo(qs)
+    log_print("Current Qumulo version: %s" % qs.current_version)
+    log_print("Upgrading Qumulo through: %s -> %s" % (qs.current_version,
+                                                     qs.to_version))
+    if qs.sharepass is not None:
+        download_from_trends(qs)
 
     if qs.download_only:
         print("Exiting before upgrade as --download-only was specified")
         sys.exit()
 
-    ####  loop through releases and upgrade the cluster serially
-    for vers_id, rel in qs.release_list.iteritems():
-        ####   re-initialize client to reset timeout
+    for vers in get_upgrade_list(qs):
         qs.rc = RestClient(qs.host, 8000)
         qs.rc.login(qs.user, qs.password)
-        qimg_path = '/' + qs.upgrade_path + '/' + rel['qimg']
+        qimg = 'qumulo_core_%s.qimg' % vers['version']
+        log_print("Upgrading to: %s" % vers['version'])
+        qimg_path = '/' + qs.upgrade_path + '/' + qimg
         file_exists = False
         try:
             attrs = qs.rc.fs.get_attr(path = qimg_path)
-            if int(attrs['size']) > 200000000:
+            if int(attrs['size']) == vers["size"]:
                 file_exists = True
             else:
                 log_print("Upgrade image %s not fully downloaded." % qimg_path)
@@ -284,7 +261,7 @@ def upgrade_cluster():
             print("Please contact care@qumulo.com")
             sys.exit()
         log_print("Upgrading cluster with: %s" % qimg_path)
-        log_print("Upgrade PREPARE: %s" % rel['version_id'])
+        log_print("Upgrade PREPARE: %s" % vers['version'])
         try:
             qs.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_PREPARE')
         except:
@@ -296,18 +273,18 @@ def upgrade_cluster():
         resp = qs.rc.upgrade.status_get()
         upgrade_state = resp['state']
         log_print("Wait for PREPARE of %s - typically takes about a minute." % \
-                                                rel['version_id'])
+                                                vers['version'])
         while upgrade_state == 'UPGRADE_PREPARING':
             resp = qs.rc.upgrade.status_get()
             log_print("... %s for %s ..." % (resp['state'],
-                                                rel['version_id']))
+                                                vers['version']))
             upgrade_state = resp['state']
             if upgrade_state == 'UPGRADE_PREPARED':
                 break
             time.sleep(15)
         if upgrade_state == 'UPGRADE_PREPARED':
             log_print("Upgrade ARM %s - typically takes a minute or two." % \
-                                                    rel['version_id'])
+                                                    vers['version'])
             resp = qs.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_ARM')
         else:
             log_print("!Fatal Error! The upgrade state is currently " + \
@@ -317,17 +294,18 @@ def upgrade_cluster():
 
         err_msg = "Qumulo cluster ARMed with %s. Reloading kernel via " + \
                         "kexec. Takes about a minute."
-        log_print(err_msg % rel['version_id'])
+        log_print(err_msg % vers['version'])
         time.sleep(10)
         version_data = None
         while version_data == None:
             log_print("... Loading Qumulo software: %s ..." % \
-                                                rel['version_id'])
+                                                vers['version'])
             try:
                 ####  10 second timeout for rest client while waiting.
                 qs.rc = RestClient(qs.host, 8000, timeout=10)
                 qs.rc.login(qs.user, qs.password)
                 version_data = qs.rc.version.version()
+                version_data["revision_id"] = version_short(version_data["revision_id"])
             except:
                 time.sleep(14)
         err_msg = "Completed upgrade to %(revision_id)s, " + \
