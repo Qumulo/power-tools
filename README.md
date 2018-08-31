@@ -40,13 +40,3 @@ Upgrade from an older build to a not-quite latest build (2.9.0)
 Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on Qumulo and properly named
 
 `python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.9.0`
-
-
-## Copy settings from one Qumulo cluster to another
-
-This script copies NFS exports, SMB shares, local users/groups, vpn, and MissionQontrol settings from one Qumulo cluster to another.
-
-### Usage
-
-Copy settings from qumulo1 to qumulo2
-`copy-settings.py --src_host qumulo1 --src_user admin --src_pass 555if234 --dest_host qumulo2 --dest_user admin --dest_pass 234sdf235`
