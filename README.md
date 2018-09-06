@@ -20,19 +20,14 @@ Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 
 ## Upgrade a Qumulo cluster
 
-This script downloads Qumulo software, loads it onto a Qumulo cluster, and upgrades the Qumulo cluster via the API.
-
-### Usage
+* This script downloads Qumulo software, loads it onto a Qumulo cluster, and upgrades the Qumulo cluster via the API.
 * Script must be run from a MacOSX or linux client machine. It cannot be run directly on a Qumulo cluster due to reboots.
 
 #### Recommended usage
 
-Step 1: Prepare for an upgrade by *only* downloading the qimg(s) to the Qumulo cluster
-
+1. Step 1: Prepare for an upgrade by *only* downloading the qimg(s) to the Qumulo cluster
 `python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest --download-only`
-
-Step 2: Upgrade the latest build
-
+2. Step 2: Upgrade the latest build
 `python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest`
 
 #### A few other examples
