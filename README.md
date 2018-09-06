@@ -25,7 +25,7 @@ This script downloads Qumulo software, loads it onto a Qumulo cluster, and upgra
 ### Usage
 * Script must be run from a MacOSX or linux client machine. It cannot be run directly on a Qumulo cluster due to reboots.
 
-# Recommended usage
+#### Recommended usage
 
 Step 1: Prepare for an upgrade by *only* downloading the qimg(s) to the Qumulo cluster
 
@@ -35,7 +35,7 @@ Step 2: Upgrade the latest build
 
 `python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest`
 
-# A few other examples
+#### A few other examples
 
 Upgrade from an older build to a not-quite latest build (2.9.0)
 
