@@ -2,7 +2,6 @@
 * python 2.7
 * `git clone https://github.com/Qumulo/power-tools`
 * `cd power-tools`
-* `pip install -r requirements.txt`
 
 
 ## Walk a Qumulo file system via the API
@@ -15,7 +14,8 @@ Performance results:
 Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 
 ### Usage
-`python walk-tree.py --host product --user admin --password *********`
+1. Makre sure you have the python requirements: `pip install -r requirements.txt`
+2. `python walk-tree.py --host product --user admin --password *********`
 
 
 ## Upgrade a Qumulo cluster
