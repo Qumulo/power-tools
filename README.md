@@ -26,8 +26,11 @@ Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 #### Recommended usage
 
 1. Step 1: Prepare for an upgrade by *only* downloading the qimg(s) to the Qumulo cluster
+
 `python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest --download-only`
+
 2. Step 2: Upgrade the latest build
+
 `python qupgrade.py --qhost product --quser admin --qpass secret --sharepass secret --vers latest`
 
 #### A few other examples
