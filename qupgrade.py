@@ -92,10 +92,11 @@ def download_from_trends(qs):
         qs.rc.fs.create_directory(name=qs.upgrade_path, dir_path='/')
     except:
         e = sys.exc_info()[1]
-        log_print("Error creating directory '/%s' on %s. ** %s **" % (
-                                                qs.upgrade_path,
-                                                qs.host,
-                                                e))
+        if 'fs_entry_exists_error' not in str(e):
+            log_print("Error creating directory '/%s' on %s. ** %s **" % (
+                                                    qs.upgrade_path,
+                                                    qs.host,
+                                                    e))
 
     #### get all qimgs from trends to qumulo cluster
     download_versions = []
@@ -137,28 +138,7 @@ def download_from_trends(qs):
 
         ####  Only download if a local version of file doesn't exist.
         if not os.path.exists(qimg):
-            log_print("Begin download of qimg: %s" % \
-                                                    rel["version"])
-            file_size = rel["size"]
-            log_print("Downloading %s byte qimg: %s" % (file_size, rel["version"]))
-            rsp = requests.get(TRENDS_DOMAIN + "/data/upgrade/version/%s?access_code=%s" % \
-                            (qimg, qs.sharepass), stream=True)
-            status_size = 10.0
-            done_count = 0
-            percent_complete = [0]*int(status_size)
-            downloaded_bytes = 0
-            sys.stdout.flush()
-            with open(qimg, 'wb') as fw:
-                for chunk in rsp.iter_content(chunk_size=1024*1024):
-                    if chunk: # filter out keep-alive new chunks
-                        fw.write(chunk)
-                        downloaded_bytes += 1024*1024
-                        if done_count < status_size \
-                            and downloaded_bytes / file_size > \
-                                                done_count / status_size \
-                            and percent_complete[done_count] == 0:
-                            percent_complete[done_count] = 1
-                            done_count += 1
+            download_file(qimg, qs)
 
         log_print("Load qimg file onto Qumulo via API: %s" % qimg)
         with open(qimg, 'rb') as fr:
@@ -169,6 +149,32 @@ def download_from_trends(qs):
         log_print("Upgrade file ready on Qumulo: %s" % qimg)
         log_print("Removing local qimg: %s" % qimg)
         os.remove(qimg)
+
+
+def download_file(qimg, qs):
+    log_print("Starting download of qimg: %s" % qimg)
+    rsp = requests.get(TRENDS_DOMAIN + "/data/upgrade/version/%s?access_code=%s" % \
+                    (qimg, qs.sharepass), allow_redirects=False)
+    rsp = requests.get(rsp.headers["Location"], stream=True)
+    file_size = int(rsp.headers["content-length"])
+    perc = int(file_size * 0.05)
+    done_buckets = []
+    for i in range(0, int(1 / 0.05)):
+        done_buckets.append((i+1) * perc)
+    downloaded_bytes = 0
+    bucket_num = 0
+    sys.stdout.flush()
+    with open(qimg, 'wb') as fw:
+        for chunk in rsp.iter_content(chunk_size=1000000):
+            if chunk: # filter out keep-alive new chunks
+                fw.write(chunk)
+                downloaded_bytes += 1000000
+                if downloaded_bytes > done_buckets[bucket_num]:
+                    sys.stdout.write("%s%%  " % (bucket_num * 5, ))
+                    sys.stdout.flush()
+                    bucket_num += 1
+    sys.stdout.write("\n")
+    log_print("Completed download of qimg: %s" % qimg)
 
 
 def upgrade_cluster():
@@ -229,6 +235,7 @@ def upgrade_cluster():
     log_print("Current Qumulo version: %s" % qs.current_version)
     log_print("Upgrading Qumulo through: %s -> %s" % (qs.current_version,
                                                      qs.to_version))
+
     if qs.sharepass is not None:
         download_from_trends(qs)
 
