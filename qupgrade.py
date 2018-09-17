@@ -8,9 +8,9 @@
 # encoding=utf8
 import sys
 reload(sys)
-# This is in here because ptyhon 2.7 struggles sometimes.
+# This is in here because python 2.7 struggles sometimes.
 sys.setdefaultencoding('utf8')
-# This is in here because MacOSX struggles sometimes.
+# This is in here because of issues with OpenSSL on some platforms
 # import urllib3
 # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 try:
@@ -44,34 +44,56 @@ class QSettings(object):
 
 
 def version_num(vers):
-    p1, p2, p3 = map(int, vers.split('.')[:3])
+    p1, p2, p3 = map(int, re.sub(r'[^0-9.]', '', vers).split('.')[:3])
     return p1 * 10000 + p2 * 100 + p3
 
+
 def version_short(vers):
-    p1, p2, p3 = vers.split('.')[:3]
+    p1, p2, p3 = re.sub(r'[^0-9.]', '', vers).split('.')[:3]
     return p1 + "." + p2  + "." + p3
+
 
 def log_print(msg):
     print("%s: %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg))
+
+
+def get_download_versions(releases, qs):
+    download_versions = []
+    skipto_state = None
+    from_num = version_num(qs.current_version)
+    to_num = version_num(qs.to_version)
+    for release in releases:
+        release_num = version_num(release["version"])
+        skipto = None
+        if "skipto" in release:
+            skipto = release["skipto"]
+
+        if release_num < from_num:
+            continue
+        elif release_num > to_num:
+            continue
+        elif release_num == from_num:
+            if skipto != None:
+                skipto_state = skipto
+        else:
+            if skipto_state != None:
+                if skipto_state == release["version"]:
+                    download_versions.append(release)
+            elif skipto_state == None:
+                download_versions.append(release)
+            if skipto != None:
+                skipto_state = skipto
+    return download_versions
+
 
 def get_upgrade_list(qs = None):
     r = requests.get(TRENDS_DOMAIN + "/data/upgrade/versions/")
     releases = json.loads(r.text)
     if qs is None:
         return releases
-    download_versions = []
-    skipto = None
-    for release in releases:
-        if version_num(release["version"]) > version_num(qs.current_version) and \
-            version_num(release["version"]) <= version_num(qs.to_version):
-            if "skipto" in release:
-                skipto = release["skipto"]
-            if skipto == None:
-                download_versions.append(release)
-            elif skipto == release["version"]:
-                download_versions.append(release)
-                skipto = None
+    download_versions = get_download_versions(releases, qs)
     return download_versions
+
 
 def download_from_trends(qs):
     ####    Get list of releases  ####
@@ -99,19 +121,7 @@ def download_from_trends(qs):
                                                     e))
 
     #### get all qimgs from trends to qumulo cluster
-    download_versions = []
-    skipto = None
-    for release in releases:
-        if version_num(release["version"]) > version_num(qs.current_version) and \
-            version_num(release["version"]) <= version_num(qs.to_version):
-            if "skipto" in release:
-                skipto = release["skipto"]
-            if skipto == None:
-                download_versions.append(release)
-            elif skipto == release["version"]:
-                download_versions.append(release)
-                skipto = None
-
+    download_versions = get_download_versions(releases, qs)
     for rel in download_versions:
         qimg = 'qumulo_core_%s.qimg' % rel["version"]
         qumulo_qimg = '/' + qs.upgrade_path + '/' + qimg
@@ -137,7 +147,7 @@ def download_from_trends(qs):
             log_print("File creation error: %s" % e)
 
         ####  Only download if a local version of file doesn't exist.
-        if not os.path.exists(qimg):
+        if not os.path.exists(qimg) or os.path.getsize(qimg) != rel["size"]:
             download_file(qimg, qs)
 
         log_print("Load qimg file onto Qumulo via API: %s" % qimg)
@@ -244,8 +254,22 @@ def upgrade_cluster():
         sys.exit()
 
     for vers in get_upgrade_list(qs):
-        qs.rc = RestClient(qs.host, 8000)
-        qs.rc.login(qs.user, qs.password)
+        connected = False
+        tries = 0
+        while not connected and tries < 6:
+            try:
+                qs.rc = RestClient(qs.host, 8000)
+                qs.rc.login(qs.user, qs.password)
+                connected = True
+            except:
+                exc = sys.exc_info()[1]
+                log_print("Qumulo API exception: %s" % exc)
+                log_print("Retrying in 10 seconds: %s" % exc)
+                time.sleep(10)
+            tries += 1
+        if not connected:
+            log_print("Qumulo API exception: Unable to login to cluster")
+
         qimg = 'qumulo_core_%s.qimg' % vers['version']
         log_print("Upgrading to: %s" % vers['version'])
         qimg_path = '/' + qs.upgrade_path + '/' + qimg
