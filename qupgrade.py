@@ -165,6 +165,9 @@ def download_file(qimg, qs):
     log_print("Starting download of qimg: %s" % qimg)
     rsp = requests.get(TRENDS_DOMAIN + "/data/upgrade/version/%s?access_code=%s" % \
                     (qimg, qs.sharepass), allow_redirects=False)
+    if rsp.status_code == 404:
+        print("Unable to download qimg. Please check the --sharepass value.")
+        sys.exit()
     rsp = requests.get(rsp.headers["Location"], stream=True)
     file_size = int(rsp.headers["content-length"])
     perc = int(file_size * 0.05)
@@ -248,6 +251,11 @@ def upgrade_cluster():
 
     if qs.sharepass is not None:
         download_from_trends(qs)
+    elif qs.download_only:
+        print("Please specify the --sharepass argument and value.")
+        print("If you don't have the password, please contact Qumulo.")
+        sys.exit()
+
 
     if qs.download_only:
         print("Exiting before upgrade as --download-only was specified")
