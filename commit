@@ -1,7 +1,0 @@
-added Qumulo Core image files to .gitignore
-standardized spelling of trademarks
-pedantic wording changes
-constant for support e-mail
-print Qumulo cluster name in message
-more explicit about what the --sharepass is
-print progress bar to stderr
