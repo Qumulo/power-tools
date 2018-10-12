@@ -60,30 +60,69 @@ def log_print(msg):
 
 def get_download_versions(releases, qs):
     download_versions = []
-    skipto_state = None
+
+    # Whether or not we're skipping releases. I.e. looking for the "skipto" release.
+    skipping = None
+
     from_num = version_num(qs.current_version)
     to_num = version_num(qs.to_version)
     for release in releases:
+        print("get_download_versions: release %s" % release)
         release_num = version_num(release["version"])
-        skipto = None
+
+        # Resetting the "skipto" version. I.e. we don't have a target version to match.
+        skip_to_version = None
+
+        # If the current release has a "skipto" field, it becomes our "skipto" target.
         if "skipto" in release:
-            skipto = release["skipto"]
+            skip_to_version = release["skipto"]
 
         if release_num < from_num:
+            print("get_download_versions: release too old: %s < %s" % (release_num, from_num))
             continue
         elif release_num > to_num:
+            print("get_download_versions: release too new: %s > %s" % (release_num, to_num))
             continue
         elif release_num == from_num:
-            if skipto != None:
-                skipto_state = skipto
+            # This release is the start version. I.e. the version the cluster is currently on.
+
+            print("get_download_versions: release just right: %s == %s" % (release_num, from_num))
+            # If there's a "skipto" target already, we go into skipping mode.
+            if skip_to_version != None:
+                ### Is this state possible?
+                print("get_download_versions: this is the start/current release, yet we have a skipto target defined already")
+                ### We mark skipping mode by setting the skipping mode flag to the "skipto" version.
+                skipping = skip_to_version
         else:
-            if skipto_state != None:
-                if skipto_state == release["version"]:
+            # This release is in the range of releases we need. I.e. current_rel < this_rel <= target_rel
+
+            # If we're in skipping mode, let's see if this is the one we're waiting for.
+            if skipping != None:
+                ### We check whether this is our "skipto" target by comparing it to the skipping mode flag
+                if skipping == release["version"]:
+                    print("get_download_versions: adding release because it's one we skip to")
                     download_versions.append(release)
-            elif skipto_state == None:
+                    ### Maybe the skipping flag should be cleared here?
+                    #skipping = None
+                    ### I don't know what would happen if a release were both a "skipto" target and
+                    ### a "skipto" initiator release. Is that even possible?
+                else:
+                    print("get_download_versions: skipping release because we're waiting for the one to skip to")
+            # If we're not in skipping mode, we just grab this release.
+            elif skipping == None:
+                print("get_download_versions: adding release because it's in range")
                 download_versions.append(release)
-            if skipto != None:
-                skipto_state = skipto
+
+            # We do this for every release in the target range, whether we've added it or skipped it.
+
+            # If there's a "skipto" target specified, we go into skipping mode.
+            if skip_to_version != None:
+                ### We mark skipping mode by setting the skipping mode flag to the "skipto" version.
+                skipping = skip_to_version
+                ### At the top of the loop the "skipto" version will be reset to None, but the
+                ### skipping mode is never cleared.
+
+    print("get_download_versions: download list: %s" % download_versions)
     return download_versions
 
 
