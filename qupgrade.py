@@ -145,7 +145,9 @@ def download_from_trends(qs):
                                         name=qimg)
         except:
             e = sys.exc_info()[1]
-            log_print("File creation error: %s" % e)
+            log_print("File creation error while trying to upload %s: %s" % (qimg, e))
+            log_print("Warning: If the uploaded %s is incomplete or corrupt, you will need to delete it manually." % qimg)
+            log_print("(Via a mountpoint or via the API using something like `qq fs_delete`.")
 
         ####  Only download if a local version of file doesn't exist.
         if not os.path.exists(qimg) or os.path.getsize(qimg) != rel["size"]:
@@ -177,17 +179,17 @@ def download_file(qimg, qs):
         done_buckets.append((i+1) * perc)
     downloaded_bytes = 0
     bucket_num = 0
-    sys.stderr.flush()
+    sys.stdout.flush()
     with open(qimg, 'wb') as fw:
         for chunk in rsp.iter_content(chunk_size=1000000):
             if chunk: # filter out keep-alive new chunks
                 fw.write(chunk)
                 downloaded_bytes += 1000000
                 if downloaded_bytes > done_buckets[bucket_num]:
-                    sys.stderr.write("%s%%  " % (bucket_num * 5, ))
-                    sys.stderr.flush()
+                    sys.stdout.write("%s%%  " % (bucket_num * 5, ))
+                    sys.stdout.flush()
                     bucket_num += 1
-    sys.stderr.write("\n")
+    sys.stdout.write("\n")
     log_print("Completed download of qimg file: %s" % qimg)
 
 
