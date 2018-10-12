@@ -17,7 +17,7 @@ try:
     import requests
     from qumulo.rest_client import RestClient
 except:
-    print("Unable to import requests and qumulo api bindings")
+    print("Unable to import requests and Qumulo api bindings")
     print("Please run the following command:")
     print("pip install qumulo_api requests")
     sys.exit()
@@ -29,6 +29,7 @@ import json
 from collections import OrderedDict
 
 TRENDS_DOMAIN = "https://trends.qumulo.com"
+QUMULO_SUPPORT_EMAIL = "care@qumulo.com"
 
 
 class QSettings(object):
@@ -105,8 +106,8 @@ def download_from_trends(qs):
         if release["version"] == qs.to_version:
             release_exists = True
     if not release_exists:
-        log_print("Desired release %s does not exist." % qs.to_version)
-        print("Please correct the upgrade version")
+        log_print("Specified Qumulo Core version %s does not exist." % qs.to_version)
+        print("Please correct the upgrade version.")
         sys.exit()
 
     #### create directory for upgrade qimgs ####
@@ -138,35 +139,37 @@ def download_from_trends(qs):
             log_print("qimg file is already uploaded: %s" % qumulo_qimg)
             continue
 
-        log_print("Preparing to download release: %s" % rel["version"])
+        log_print("Preparing to download Qumulo Core: %s" % rel["version"])
         try:
             qs.rc.fs.create_file(dir_path='/' + qs.upgrade_path,
                                         name=qimg)
         except:
             e = sys.exc_info()[1]
-            log_print("File creation error: %s" % e)
+            log_print("File creation error while trying to upload %s: %s" % (qimg, e))
+            log_print("Warning: If the uploaded %s is incomplete or corrupt, you will need to delete it manually." % qimg)
+            log_print("(Via a mountpoint or via the API using something like `qq fs_delete`.")
 
         ####  Only download if a local version of file doesn't exist.
         if not os.path.exists(qimg) or os.path.getsize(qimg) != rel["size"]:
             download_file(qimg, qs)
 
-        log_print("Load qimg file onto Qumulo via API: %s" % qimg)
+        log_print("Load qimg file onto Qumulo cluster via API: %s" % qimg)
         with open(qimg, 'rb') as fr:
             qs.rc.fs.write_file(path = '/%s/%s' % (
                                             qs.upgrade_path,
                                             qimg), 
                                         data_file=fr)
-        log_print("Upgrade file ready on Qumulo: %s" % qimg)
-        log_print("Removing local qimg: %s" % qimg)
+        log_print("Upgrade file ready on Qumulo cluster: %s" % qimg)
+        log_print("Removing local qimg file: %s" % qimg)
         os.remove(qimg)
 
 
 def download_file(qimg, qs):
-    log_print("Starting download of qimg: %s" % qimg)
+    log_print("Starting download of qimg file: %s" % qimg)
     rsp = requests.get(TRENDS_DOMAIN + "/data/upgrade/version/%s?access_code=%s" % \
                     (qimg, qs.sharepass), allow_redirects=False)
     if rsp.status_code == 404:
-        print("Unable to download qimg. Please check the --sharepass value.")
+        print("Unable to download qimg file. Please check the --sharepass password.")
         sys.exit()
     rsp = requests.get(rsp.headers["Location"], stream=True)
     file_size = int(rsp.headers["content-length"])
@@ -187,7 +190,7 @@ def download_file(qimg, qs):
                     sys.stdout.flush()
                     bucket_num += 1
     sys.stdout.write("\n")
-    log_print("Completed download of qimg: %s" % qimg)
+    log_print("Completed download of qimg file: %s" % qimg)
 
 
 def upgrade_cluster():
@@ -197,9 +200,9 @@ def upgrade_cluster():
     parser.add_argument('--quser', required=True, help='Qumulo API user')
     parser.add_argument('--qpass', required=True, help='Qumulo API password')
     parser.add_argument('--qpath', default='upgrade', help='Root-based path to install/find the upgrade qimg file on the cluster')
-    parser.add_argument('--sharepass', help='Share password. Contact Qumulo for details')
-    parser.add_argument('--vers', required=True, help='The version to upgrade to.')
-    parser.add_argument('--download-only', default=False, help='Do not run upgrades, only download qimgs from box', action='store_true')
+    parser.add_argument('--sharepass', help='Fileserver download password. Contact %s for details' % QUMULO_SUPPORT_EMAIL)
+    parser.add_argument('--vers', required=True, help='The Qumulo Core version to upgrade to.')
+    parser.add_argument('--download-only', default=False, help='Do not perform upgrades. Only download qimg files from fileserver', action='store_true')
     args = parser.parse_args()
 
     if args.vers == "latest":
@@ -212,7 +215,7 @@ def upgrade_cluster():
         pass
     else:
         log_print("Exiting")
-        print("'%s' is not a valid Qumulo version" % args.vers)
+        print("'%s' is not a valid Qumulo Core version" % args.vers)
         sys.exit()
 
     qs.to_version     = version_short(args.vers)
@@ -224,16 +227,16 @@ def upgrade_cluster():
     qs.download_only  = args.download_only
 
     ####   Set up the Qumulo REST client
-    log_print("Logging into qumulo cluster to begin upgrade process")
+    log_print("Logging into Qumulo cluster %s to begin upgrade process" % qs.host)
     try:
         qs.rc = RestClient(qs.host, 8000)
         qs.rc.login(qs.user, qs.password)
         log_print("Login succesful")
     except:
-        log_print("Unable to connect to Qumulo cluster via api")
-        log_print("Qumulo cluster details: %s, login: %s" % (
+        log_print("Unable to connect to Qumulo cluster %s via api" % qs.host)
+        log_print("Credentials used: username=%s, password=%s" % (
                                                     qs.user, qs.password))
-        print("Please correct your Qumulo credientials and try again.")
+        print("Please correct your Qumulo credentials and try again.")
         sys.exit()
 
     revision_id = qs.rc.version.version()['revision_id']
@@ -242,18 +245,17 @@ def upgrade_cluster():
     if version_num(qs.current_version) >= version_num(qs.to_version):
         log_print("!! Error !! Unable to upgrade")
         err_msg = "Can't upgrade to %s as you're " + \
-                "already on or past that release."
-        print(err_msg % qs.to_version)
+                "already on or past that release (%s)."
+        print(err_msg % qs.to_version, qs.current_version)
         sys.exit()
-    log_print("Current Qumulo version: %s" % qs.current_version)
-    log_print("Upgrading Qumulo through: %s -> %s" % (qs.current_version,
-                                                     qs.to_version))
+    log_print("Current Qumulo Core version     : %s" % qs.current_version)
+    log_print("Upgrading to Qumulo Core version: %s" % qs.to_version)
 
     if qs.sharepass is not None:
         download_from_trends(qs)
     elif qs.download_only:
         print("Please specify the --sharepass argument and value.")
-        print("If you don't have the password, please contact Qumulo.")
+        print("If you don't have the fileserver download password, please contact %s" % QUMULO_SUPPORT_EMAIL)
         sys.exit()
 
 
@@ -276,7 +278,7 @@ def upgrade_cluster():
                 time.sleep(10)
             tries += 1
         if not connected:
-            log_print("Qumulo API exception: Unable to login to cluster")
+            log_print("Qumulo API exception: Unable to login to Qumulo cluster %s" % qs.host)
 
         qimg = 'qumulo_core_%s.qimg' % vers['version']
         log_print("Upgrading to: %s" % vers['version'])
@@ -297,7 +299,7 @@ def upgrade_cluster():
         resp = qs.rc.upgrade.status_get()
         if resp['error_state'] != 'UPGRADE_ERROR_NO_ERROR':
             log_print("!Fatal Error! " + resp['error_state'])
-            print("Please contact care@qumulo.com")
+            print("Please contact %s" % QUMULO_SUPPORT_EMAIL)
             sys.exit()
         log_print("Upgrading cluster with: %s" % qimg_path)
         log_print("Upgrade PREPARE: %s" % vers['version'])
@@ -306,7 +308,7 @@ def upgrade_cluster():
         except:
             exc = sys.exc_info()[1]
             log_print("!Fatal Error! Prepare exception: %s" % exc)
-            print("Please contact care@qumulo.com")
+            print("Please contact %s" % QUMULO_SUPPORT_EMAIL)
             sys.exit()
 
         resp = qs.rc.upgrade.status_get()
@@ -328,7 +330,7 @@ def upgrade_cluster():
         else:
             log_print("!Fatal Error! The upgrade state is currently " + \
                             "unknown. Unable to arm.")
-            print("Please contact care@qumulo.com")
+            print("Please contact %s" % QUMULO_SUPPORT_EMAIL)
             sys.exit()
 
         err_msg = "Qumulo cluster ARMed with %s. Reloading kernel via " + \
@@ -337,7 +339,7 @@ def upgrade_cluster():
         time.sleep(10)
         version_data = None
         while version_data == None:
-            log_print("... Loading Qumulo software: %s ..." % \
+            log_print("... Loading Qumulo Core %s ..." % \
                                                 vers['version'])
             try:
                 ####  10 second timeout for rest client while waiting.
