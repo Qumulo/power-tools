@@ -374,6 +374,5 @@ def test_many_downloads():
     test_downloads('2.9.2', '2.9.4')
 
 if __name__ == "__main__":
-    # test_many_downloads()
     upgrade_cluster()
 
