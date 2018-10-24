@@ -26,6 +26,7 @@ import re
 import os
 import time
 import json
+from getpass import getpass
 from collections import OrderedDict
 
 TRENDS_DOMAIN = "https://trends.qumulo.com"
@@ -196,7 +197,7 @@ def upgrade_cluster():
     parser = argparse.ArgumentParser()
     parser.add_argument('--qhost', required=True, help='Qumulo hostname or ip address')
     parser.add_argument('--quser', required=True, help='Qumulo API user')
-    parser.add_argument('--qpass', required=True, help='Qumulo API password')
+    parser.add_argument('--qpass', required=False, help='Qumulo API password')
     parser.add_argument('--qpath', default='upgrade', help='Root-based path to install/find the upgrade qimg file on the cluster')
     parser.add_argument('--sharepass', help='Fileserver download password. Contact Qumulo for details')
     parser.add_argument('--vers', required=True, help='The Qumulo Core version to upgrade to')
@@ -219,7 +220,13 @@ def upgrade_cluster():
     qs.to_version     = version_short(args.vers)
     qs.host           = args.qhost
     qs.user           = args.quser
-    qs.password       = args.qpass
+
+    # Prompt for password interactively if it was not supplied on the command line
+    if (args.qpass):
+        qs.password       = args.qpass
+    else:
+        qs.password = getpass("Password for %s: " % qs.user)
+    
     qs.upgrade_path   = args.qpath
     qs.sharepass      = args.sharepass
     qs.download_only  = args.download_only
