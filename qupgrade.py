@@ -193,6 +193,8 @@ def download_file(qimg, qs):
 
 def upgrade_cluster():
     qs = QSettings()
+    quarterly_only = False
+    latest_quarterly_build = None
     parser = argparse.ArgumentParser()
     parser.add_argument('--qhost', required=True, help='Qumulo hostname or ip address')
     parser.add_argument('--quser', required=True, help='Qumulo API user')
@@ -205,6 +207,9 @@ def upgrade_cluster():
 
     if args.vers == "latest":
         args.vers = get_upgrade_list()[-1]["version"]
+    elif args.vers[0:8] == "latest_q":
+        args.vers = filter(lambda d: 'latest_quarterly_build' in d, get_upgrade_list())[0]["version"]
+        quarterly_only = True
     elif re.match(r'^[0-9]+[.][0-9]+[.][0-9]+[A-Zz-z]*$', args.vers):
         # this is a valid qumulo version
         pass
@@ -239,6 +244,14 @@ def upgrade_cluster():
 
     revision_id = qs.rc.version.version()['revision_id']
     qs.current_version = version_short(revision_id.replace("Qumulo Core ", ""))
+
+    if quarterly_only:
+        log_print("Quarterly upgrade chosen. Latest quarterly version: %s" % args.vers)
+        if qs.current_version == args.vers:
+            log_print("Current version == quarterly version == %s" % args.vers)
+            print("Exiting script. Will not upgrade Qumulo because it's already on latest Quarterly release.")
+            sys.exit()
+
     ####  Make sure our first install build version is greater than the current
     if version_num(qs.current_version) >= version_num(qs.to_version):
         log_print("!! Error !! Unable to upgrade")
