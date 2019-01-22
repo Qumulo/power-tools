@@ -6,7 +6,7 @@
 
 ## Walk a Qumulo file system via the API
 
-This python script uses the Qumulo api and the UltraJson library to quickly walk a Qumulo filesystem tree in a parallel manner. The output is a single file with a list of every file and directory as well as its size. You can look in the file to see all the available file metadata.
+This python script uses the Qumulo api to quickly walk a Qumulo filesystem tree in a parallel manner. The output is a single file with a list of every file and directory as well as its size. You can look in the script to see other available file metadata you might wish to search/track.
 
 Performance results: 
 * 3,000+ files per second
@@ -14,8 +14,8 @@ Performance results:
 Using Qumulo 4 node QC24 cluster with a Mac 2.3 GHz Intel i7 8-core CPU.
 
 ### Usage
-1. Makre sure you have the python requirements: `pip install -r requirements.txt`
-2. `python walk-tree.py --host product --user admin --password *********`
+1. Make sure you have the python requirements: `pip install -r requirements.txt`
+2. `python api-tree-walk.py -s product -p ********* -d /home`
 
 
 ## Upgrade a Qumulo cluster
