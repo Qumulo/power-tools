@@ -52,7 +52,9 @@ Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on
 `python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.9.0`
 
 
-## Add Qumulo activity to various databases including influx, elastic search, postgres, splunk, and csv.
+## Add Qumulo activity to various databases.
+
+We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to pipe activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
 
 1. Modify api-tree-walk.py to specify your databases and Qumulo clusters you wish to use.
 2. run `python api-to-dbs.py`
