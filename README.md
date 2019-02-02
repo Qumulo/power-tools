@@ -50,3 +50,11 @@ Upgrade from an older build to a not-quite latest build (2.9.0)
 Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on Qumulo and properly named
 
 `python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.9.0`
+
+
+## Add Qumulo activity to various databases including influx, elastic search, postgres, splunk, and csv.
+
+1. Modify api-tree-walk.py to specify your databases and Qumulo clusters you wish to use.
+2. run `python api-to-dbs.py`
+3. Add the `python api-to-dbs.py` command to your crontab to run every 1 or two minutes with something like:
+    `* * * * * cd /location/of/the-power-tools; python api-to-dbs.py >> api-to-dbs.log.txt 2>&1`
