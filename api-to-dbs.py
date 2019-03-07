@@ -82,9 +82,9 @@ class QumuloActivityData:
             if data["path"] != "" and data["path"] != "/":
                 check_ids.append(file_id)
                 if len(check_ids) >= 100:
-                    pool.apply_async(QumuloActivityData.ids_to_attrs, (cluster, check_ids), callback=self.done_ids_to_attrs)
+                    pool.apply_async(QumuloActivityData.ids_to_attrs, (self.cluster, check_ids), callback=self.done_ids_to_attrs)
                     check_ids = []
-        pool.apply_async(QumuloActivityData.ids_to_attrs, (cluster, check_ids), callback=self.done_ids_to_attrs)
+        pool.apply_async(QumuloActivityData.ids_to_attrs, (self.cluster, check_ids), callback=self.done_ids_to_attrs)
         pool.close()
         pool.join()
         log("Completed resolving of %s inode ids." % len(ids))

@@ -39,7 +39,11 @@ def list_dir(rc, d, out_file):
     next_page = "first"
     while next_page != "":
         if next_page == "first":
-            r = rc.fs.read_directory(path=d["path"], page_size=1000)
+            try:
+                r = rc.fs.read_directory(path=d["path"], page_size=1000)
+            except:
+                log("Error reading directory: %s" % d["path"])
+                next
         else:
             r = rc.request("GET", r['paging']['next'])
         next_page = r['paging']['next']
@@ -127,7 +131,7 @@ def walk_tree(QHOST, QUSER, QPASS, start_path):
 
 
 if __name__ == '__main__':
-    usage_msg = "\nExample: python walk-tree.py -s qumulo -p password123 -d /home/\nSpecify -h for list of arguments."
+    usage_msg = "\nExample: python api-tree-walk.py -s qumulo -p password123 -d /home/\nSpecify -h for list of arguments."
     parser = argparse.ArgumentParser(description='Recursive parallel tree walk with Qumulo API', usage=usage_msg)
     parser.add_argument('-s', required=True, help='Qumulo cluster ip/hostname')
     parser.add_argument('-p', required=True, help='Qumulo api *admin* password')
