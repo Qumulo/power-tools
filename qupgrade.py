@@ -41,7 +41,7 @@ class QSettings(object):
     download_only = None
     current_version = None
     to_version = None
-    qimg_type = ""
+    model = None
 
 
 def version_num(vers):
@@ -125,13 +125,18 @@ def download_from_trends(qs):
     #### get all qimgs from trends to qumulo cluster
     download_versions = get_download_versions(releases, qs)
     for rel in download_versions:
-        qimg = '%squmulo_core_%s.qimg' % (qs.qimg_type, rel["version"])
+        custom_qimg = ""
+        if qs.model == "AWS":
+            custom_qimg = "cloud_aws_"
+        elif qs.model == "HPE" and "hpe_size" in rel:
+            custom_qimg = "hpe_"
+        qimg = '%squmulo_core_%s.qimg' % (custom_qimg, rel['version'])
         qumulo_qimg = '/' + qs.upgrade_path + '/' + qimg
         #### check to see if qimg already exists on cluster ####
         file_exists = False
         try:
             attrs = qs.rc.fs.get_attr(path = qumulo_qimg)
-            if int(attrs['size']) == rel["%ssize" % qs.qimg_type]:
+            if int(attrs['size']) == rel["%ssize" % custom_qimg]:
                 file_exists = True
         except:
             e = sys.exc_info()[1]
@@ -149,7 +154,7 @@ def download_from_trends(qs):
             log_print("File creation error: %s" % e)
 
         ####  Only download if a local version of file doesn't exist.
-        if not os.path.exists(qimg) or os.path.getsize(qimg) != rel["%ssize" % qs.qimg_type]:
+        if not os.path.exists(qimg) or os.path.getsize(qimg) != rel["%ssize" % custom_qimg]:
             download_file(qimg, qs)
 
         log_print("Load qimg file onto Qumulo Cluster via API: %s" % qimg)
@@ -246,9 +251,12 @@ def upgrade_cluster():
     revision_id = qs.rc.version.version()['revision_id']
     qs.current_version = version_short(revision_id.replace("Qumulo Core ", ""))
 
-    if "AWS" in qs.rc.cluster.list_node(1)["model_number"]:
-        log_print("This is an AWS cloud-based cluster")
-        qs.qimg_type = "cloud_aws_"
+    if 'AWS' in qs.rc.cluster.list_node(1)["model_number"]:
+        qs.model = 'AWS'
+    elif 'HPApollo4200' in qs.rc.cluster.list_node(1)["model_number"]:
+        qs.model = 'HPE'
+    else:
+        qs.model = 'Qumulo'
 
     if quarterly_only:
         log_print("Quarterly upgrade chosen. Latest quarterly version: %s" % args.vers)
@@ -296,13 +304,18 @@ def upgrade_cluster():
         if not connected:
             log_print("Qumulo API exception: Unable to login to Qumulo cluster %s" % qs.host)
 
-        qimg = '%squmulo_core_%s.qimg' % (qs.qimg_type, vers['version'])
+        custom_qimg = ""
+        if qs.model == "AWS":
+            custom_qimg = "cloud_aws_"
+        elif qs.model == "HPE" and "hpe_size" in vers:
+            custom_qimg = "hpe_"
+        qimg = '%squmulo_core_%s.qimg' % (custom_qimg, vers['version'])
         log_print("Upgrading to: %s" % vers['version'])
         qimg_path = '/' + qs.upgrade_path + '/' + qimg
         file_exists = False
         try:
             attrs = qs.rc.fs.get_attr(path = qimg_path)
-            if int(attrs['size']) == vers["%ssize" % qs.qimg_type]:
+            if int(attrs['size']) == vers["%ssize" % custom_qimg]:
                 file_exists = True
             else:
                 log_print("Upgrade image %s not fully downloaded." % qimg_path)
