@@ -143,16 +143,23 @@ class QumuloActivityData:
 
     def load_data_into_csv(self, csv):
         new_file = False
-        csv_path = "%s/%s-%s.txt" % (csv['directory'], self.cluster['host'], self.current_timestamp.strftime('%Y%m%d'))
+        day = self.current_timestamp.strftime('%Y%m%d')
+        hour = self.current_timestamp.strftime('%H')
+        csv_dir = "%s/%s/%s" % (csv['directory']
+                                , self.cluster['host']
+                                , day)
+        csv_path = "%s/activity-data-%s.csv" % (csv_dir, hour)
+        if not os.path.exists(csv_dir):
+            os.makedirs(csv_dir)
         log("Load %s entries into csv %s" % (len(self.new_db_entries), csv_path))
         if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
             new_file = True
         fw = open(csv_path, "a")
         for d in self.new_db_entries:
             if new_file:
-                fw.write('|'.join(d.keys()) + "\n")
+                fw.write(','.join(d.keys()) + "\n")
                 new_file = False
-            fw.write('|'.join([str(v) for v in d.values()]) + "\n")
+            fw.write(','.join([str(v) for v in d.values()]) + "\n")
         fw.close()
         log("Loaded %s entries into csv %s" % (len(self.new_db_entries), csv_path))
 
@@ -274,7 +281,6 @@ class QumuloActivityData:
                 self.ids_to_paths[inode_id]["is-dir"] = True
 
 
-
 ####################################################################################
 #
 # Everything below is example data and will need to be changed.
@@ -285,13 +291,13 @@ class QumuloActivityData:
 QUMULO_CLUSTERS = [
     # modify these settings to connect to the Qumulo API.
     {
-        'host': 'product', # qumulo cluster hostname
+        'host': 'product.example.com', # qumulo cluster hostname
         'user': 'admin',   # qumulo cluster api admin user
         'password': '',    # qumulo cluster api admin password
     },
     # You can add more clusters too.
     # {
-    #     'host': 'gravytrain',
+    #     'host': 'qumulo2.example.com',
     #     'user': 'admin',
     #     'password': '',
     # },
@@ -300,7 +306,7 @@ QUMULO_CLUSTERS = [
 # Settings to connect to various databases.
 DBS = {
     # modify this if you want to save to a local or mounted path
-    'csv': {'directory': '/mnt/product/activity-data'},
+    'csv': {'directory': '/mnt/big-data/qumulo-activity'},
     # modify this if you want to save to an influx db
     # 'influx': {'host': 'querydb.eng.qumulo.com', # the host of your influx db
     #             'db': 'qumulo', # you'll need to create this in influx
@@ -325,7 +331,7 @@ DBS = {
     # },
 }
 
-## these settings are mostly intended to help with data reduction on large, busy clusters
+## these settings are intended to help with data reduction on large, busy clusters
 IOPS_THRESHOLD = 1
 THROUGHPUT_THRESHOLD = 10000
 DIRECTORY_DEPTH_LIMIT = 4
