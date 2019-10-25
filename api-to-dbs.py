@@ -159,6 +159,7 @@ class QumuloActivityData:
             if new_file:
                 fw.write(','.join(d.keys()) + "\n")
                 new_file = False
+            d['timestamp'] = d['timestamp'].replace('T', ' ').replace('Z', '')
             fw.write(','.join([str(v) for v in d.values()]) + "\n")
         fw.close()
         log("Loaded %s entries into csv %s" % (len(self.new_db_entries), csv_path))
