@@ -56,7 +56,7 @@ Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on
 
 We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to pipe activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
 
-1. Modify api-tree-walk.py to specify your databases and Qumulo clusters you wish to use.
+1. Modify api-to-dbs.py to specify your databases and Qumulo clusters you wish to use.
 2. run `python api-to-dbs.py`
 3. Add the `python api-to-dbs.py` command to your crontab to run every 1 or two minutes with something like:
 
