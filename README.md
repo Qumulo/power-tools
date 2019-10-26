@@ -75,12 +75,10 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
 
 ```json
 "influx": {"host": "influxdb.example.com",
-            // you'll need to create this db in influx
             "db": "qumulo",
             "measurement": "qumulo_fs_activity"
             },
 "postgres": {"host": "db.example.com",
-            // you'll need to create or have this db in postgres
             "db":   "qumulo_data",
             "user": "postgres",
             "pass": ""
@@ -89,20 +87,26 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
         "index": "qumulo",
         "type": "qumulo_fs_activity"
         },
-// you will need to enable the /services/collector/event in splunk and generate a token
 "splunk": {"host": "elasticdb.example.com",
         "token": "2ea5c4dd-dc73-4b89-af26-2ea6026d0d39",
         "event": "qumulo_fs_activity"
 },
 ```
+For the vaarious databases, you will need to have your own DB server set up to pass the data. You will also potentially need to create a new database withing the DB server. For splunk, you will need to enable the /services/collector/event in splunk and generate a token for the configuration file.
+
 
 The configuration parameters are pretty self-explanatory and described below.
 
 ```json
-"IOPS_THRESHOLD": 1, // the minimum total IOPS value per path+client required for being saved into the database
-"THROUGHPUT_THRESHOLD": 10000, // the minimum total throughput value per path+client required for being saved into the database
-"DIRECTORY_DEPTH_LIMIT": 4, // the maximum directory depth to be tracked in the paths
-"DIRECTORIES_ONLY": true, // only story directory names. if false then we go down to file names.
-"DEBUG": true // verbose logging
+"IOPS_THRESHOLD": 1,
+"THROUGHPUT_THRESHOLD": 10000, 
+"DIRECTORY_DEPTH_LIMIT": 4,
+"DIRECTORIES_ONLY": true,
+"DEBUG": true
 ```
 
+"IOPS_THRESHOLD"- the minimum total IOPS value per path+client required for being saved into the database
+"THROUGHPUT_THRESHOLD" - the minimum total throughput value per path+client required for being saved into the database
+"DIRECTORY_DEPTH_LIMIT" - the maximum directory depth to be tracked in the paths
+"DIRECTORIES_ONLY" - only story directory names. if false then we go down to file names.
+"DEBUG" - verbose logging
