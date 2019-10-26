@@ -105,8 +105,8 @@ The configuration parameters are pretty self-explanatory and described below.
 "DEBUG": true
 ```
 
-"IOPS_THRESHOLD"- the minimum total IOPS value per path+client required for being saved into the database
-"THROUGHPUT_THRESHOLD" - the minimum total throughput value per path+client required for being saved into the database
-"DIRECTORY_DEPTH_LIMIT" - the maximum directory depth to be tracked in the paths
-"DIRECTORIES_ONLY" - only story directory names. if false then we go down to file names.
-"DEBUG" - verbose logging
+- "IOPS_THRESHOLD"- the minimum total IOPS value per path+client required for being saved into the database
+- "THROUGHPUT_THRESHOLD" - the minimum total throughput value per path+client required for being saved into - the database
+- "DIRECTORY_DEPTH_LIMIT" - the maximum directory depth to be tracked in the paths
+- "DIRECTORIES_ONLY" - only story directory names. if false then we go down to file names.
+- "DEBUG" - verbose logging
