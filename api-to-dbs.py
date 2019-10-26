@@ -37,6 +37,7 @@ class QumuloActivityData:
                         client_ip VARCHAR(20),
                         client_hostname VARCHAR(256),
                         path VARCHAR(2048),
+                        path_levels SMALLINT,
                         ts TIMESTAMP,
                         file_throughput_write FLOAT,
                         file_throughput_read FLOAT,
@@ -133,6 +134,7 @@ class QumuloActivityData:
                 ("client_ip", ip),
                 ("client_host_name", self.ips_to_hostnames[ip] if ip in self.ips_to_hostnames else ""),
                 ("path", path),
+                ("path_levels", len(re.findall("/", path)) if path != '/' else 0 ),
                 ("timestamp", self.current_timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')),
             ])
             for k, v in data.iteritems():
