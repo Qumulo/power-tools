@@ -1,0 +1,17 @@
+{
+    "QUMULO_CLUSTERS":[
+        {
+            "host": "product.example.com",
+            "user": "admin",
+            "password": ""
+        }
+    ],
+    "DBS":{
+        "csv": {"directory": "/mnt/big-data/qumulo-activity"}
+    },
+    "IOPS_THRESHOLD": 1,
+    "THROUGHPUT_THRESHOLD": 10000,
+    "DIRECTORY_DEPTH_LIMIT": 4,
+    "DIRECTORIES_ONLY": true,
+    "DEBUG": true
+}

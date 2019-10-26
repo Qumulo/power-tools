@@ -54,10 +54,36 @@ Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on
 
 ## Add Qumulo activity to various databases.
 
-We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to pipe activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
+We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to send activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
 
-1. Modify api-to-dbs.py to specify your databases and Qumulo clusters you wish to use.
-2. run `python api-to-dbs.py`
-3. Add the `python api-to-dbs.py` command to your crontab to run every 1 or two minutes with something like:
+1. Install the python 2.7 prequisites. `pip install qumulo_api`
+2. Copy `sample-config.json` to `config.json` and then specify your databases and Qumulo clusters you wish to use in the new `config.json` file.
+3. run `python api-to-dbs.py` to confirm everything works.
+4. Add the `python api-to-dbs.py` command to your crontab to run every 1 or two minutes with something like:
 
 `* * * * * cd /location/of/the-power-tools; python api-to-dbs.py >> api-to-dbs.log.txt 2>&1`
+
+
+#### config.json details
+
+`sample-config.json` is currently only set up to save data to hourly csv files. If you want to send Qumulo data to other databases, here is the json configurations you can add to your `config.json`:
+
+```json
+"influx": {"host": "querydb.example.com",
+            "db": "qumulo",
+            "measurement": "qumulo_fs_activity"
+            },
+"postgres": {"host": "querydb",
+            "db":   "customer_analytics",
+            "user": "postgres",
+            "pass": ""
+            },
+"elastic": {"host": "pm1-10g.eng.qumulo.com",
+        "index": "qumulo",
+        "type": "qumulo_fs_activity"
+        },
+"splunk": {"host": "pm1-10g.eng.qumulo.com",
+        "token": "2ea5c4dd-dc73-4b89-af26-2ea6026d0d39",
+        "event": "qumulo_fs_activity"
+},
+```

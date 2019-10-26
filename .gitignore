@@ -90,3 +90,4 @@ ENV/
 
 # Qumulo Core image files
 *.qimg
+config.json

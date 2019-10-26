@@ -12,15 +12,28 @@ from multiprocessing import Pool
 from qumulo.rest_client import RestClient
 from collections import OrderedDict
 
-def log(msg):
+def log(msg, override=False):
     if DEBUG:
         t = datetime.datetime.utcnow()
         print("%s - %s" % (t.strftime('%Y-%m-%dT%H:%M:%SZ'), msg))
 
 class QumuloActivityData:
 
-    def __init__(self, cluster):
-        # default dictionary for activity data
+    def __init__(self, cluster, conf):
+        self.DIRECTORY_DEPTH_LIMIT = conf['DIRECTORY_DEPTH_LIMIT']
+        self.IOPS_THRESHOLD = conf['IOPS_THRESHOLD']
+        self.THROUGHPUT_THRESHOLD = conf['THROUGHPUT_THRESHOLD']
+        self.DIRECTORIES_ONLY = conf['DIRECTORIES_ONLY']
+
+        # initial fields in the data dict
+        # "qumulo_host"
+        # "client_ip"
+        # "client_host_name"
+        # "path"
+        # "path_levels"
+        # "timestamp"
+
+        # default dict for the metrics
         self.EMPTY_DATA = OrderedDict([
             ('file-throughput-write', 0.0),
             ('file-throughput-read', 0.0),
@@ -105,11 +118,11 @@ class QumuloActivityData:
             if path_info["path"] == '':
                 shorter_path = '/'
             else:
-                shorter_path = '/'.join(path_info["path"].split('/')[0:DIRECTORY_DEPTH_LIMIT+1])
+                shorter_path = '/'.join(path_info["path"].split('/')[0:self.DIRECTORY_DEPTH_LIMIT+1])
                 if shorter_path[-1] == '/':
                     shorter_path = shorter_path[:-1]
             ip_and_path = d['ip'] + ':' + shorter_path
-            if DIRECTORIES_ONLY and not path_info["is-dir"] and shorter_path != '/':        
+            if self.DIRECTORIES_ONLY and not path_info["is-dir"] and shorter_path != '/':        
                 ip_and_path = re.sub(r'/[^/]+$', '', ip_and_path)
             if ip_and_path[-1] == ":":
                 ip_and_path = ip_and_path + "/"
@@ -126,7 +139,7 @@ class QumuloActivityData:
     def prepare_data_for_dbs(self):
         log("Preparing data to add into databases and filter by iops/throughput")
         for ip_and_path, data in self.combined_data.iteritems():
-            if data['iops-total'] < IOPS_THRESHOLD and data['throughput-total'] < THROUGHPUT_THRESHOLD:
+            if data['iops-total'] < self.IOPS_THRESHOLD and data['throughput-total'] < self.THROUGHPUT_THRESHOLD:
                 continue
             (ip, path) = ip_and_path.split(':', 1)
             entry = OrderedDict([
@@ -267,7 +280,7 @@ class QumuloActivityData:
     def ids_to_attrs(cluster, id_attr_list):
         inode_types = {}
         qumulo_client = RestClient(cluster['host'], 8000)
-        qumulo_client.login(cluster['user'], cluster['password']);
+        qumulo_client.login(cluster['user'], cluster['password'])
         for inode_id in id_attr_list:
             try:
                 attrs = qumulo_client.fs.get_attr(id_ = inode_id)
@@ -284,68 +297,29 @@ class QumuloActivityData:
                 self.ids_to_paths[inode_id]["is-dir"] = True
 
 
-####################################################################################
-#
-# Everything below is example data and will need to be changed.
-# 
-####################################################################################
 
-# Qumulo clusters to track
-QUMULO_CLUSTERS = [
-    # modify these settings to connect to the Qumulo API.
-    {
-        'host': 'product.example.com', # qumulo cluster hostname
-        'user': 'admin',   # qumulo cluster api admin user
-        'password': '',    # qumulo cluster api admin password
-    },
-    # You can add more clusters too.
-    # {
-    #     'host': 'qumulo2.example.com',
-    #     'user': 'admin',
-    #     'password': '',
-    # },
-]
-
-# Settings to connect to various databases.
-DBS = {
-    # modify this if you want to save to a local or mounted path
-    'csv': {'directory': '/mnt/big-data/qumulo-activity'},
-    # modify this if you want to save to an influx db
-    # 'influx': {'host': 'querydb.eng.qumulo.com', # the host of your influx db
-    #             'db': 'qumulo', # you'll need to create this in influx
-    #             'measurement': 'qumulo_fs_activity',
-    #             },
-    # modify this if you want to save to an influx db
-    # 'postgres': {'host': 'querydb',
-    #                'db':   'customer_analytics',
-    #                'user': 'postgres',
-    #                'pass': '',
-    #               },
-    # modify this if you want to save to an eleastic search db
-    # you will also need to enable 
-    # 'elastic': {'host': 'pm1-10g.eng.qumulo.com', # the host of your elastic search db
-    #             'index': 'qumulo', # the name of your index
-    #             'type': 'qumulo_fs_activity',
-    #             },
-    # you will need to enable the /services/collector/event in splunk and generate a token
-    # 'splunk': {'host': 'pm1-10g.eng.qumulo.com',
-    #             'token': '2ea5c4dd-dc73-4b89-af26-2ea6026d0d39',
-    #             'event': 'qumulo_fs_activity',
-    # },
-}
-
-## these settings are intended to help with data reduction on large, busy clusters
-IOPS_THRESHOLD = 1
-THROUGHPUT_THRESHOLD = 10000
-DIRECTORY_DEPTH_LIMIT = 4
-DIRECTORIES_ONLY = True
 DEBUG = True
 
-
 if __name__ == "__main__":
+    config_file = "config.json"
+    try:
+        conf = json.loads(open(config_file, "r").read())
+    except IOError, e:
+        log("*** Error reading config file: %s" % config_file, True)
+        log("*** Exception: %s" % e, True)
+        sys.exit()
+    except ValueError, e:
+        log("*** Error parsing config file: %s" % config_file, True)
+        log("*** Exception: %s" % e, True)
+        sys.exit()
+
+    QUMULO_CLUSTERS = conf['QUMULO_CLUSTERS']
+    DBS = conf['DBS']
+    if 'DEBUG' in conf:
+        DEBUG = conf['DEBUG']
     for cluster in QUMULO_CLUSTERS:
         try:
-            qad = QumuloActivityData(cluster)
+            qad = QumuloActivityData(cluster, conf)
             qad.resolve_paths_and_ips()
             qad.aggregate_data()
             qad.prepare_data_for_dbs()
@@ -363,7 +337,7 @@ if __name__ == "__main__":
             if "splunk" in DBS:
                 qad.load_data_into_splunk(DBS["splunk"])
         except Exception, err:
-            print("*** Exception ****")
-            print(sys.exc_info()[0])
-            print(sys.exc_info()[1])
-            print(traceback.format_exc())
+            log("*** Exception ****", True)
+            log(sys.exc_info()[0], True)
+            log(sys.exc_info()[1], True)
+            log(traceback.format_exc(), True)
