@@ -66,24 +66,41 @@ We know you're excited to get your Qumulo API data into your centralized databas
 
 #### config.json details
 
+The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracked.
+```json
+    "QUMULO_CLUSTERS":[
+```
+
 `sample-config.json` is currently only set up to save data to hourly csv files. If you want to send Qumulo data to other databases, here is the json configurations you can add to your `config.json`:
 
 ```json
-"influx": {"host": "querydb.example.com",
-            "db": "qumulo",
+"influx": {"host": "influxdb.example.com",
+            "db": "qumulo", // you'll need to create this in influx
             "measurement": "qumulo_fs_activity"
             },
-"postgres": {"host": "querydb",
-            "db":   "customer_analytics",
+"postgres": {"host": "db.example.com",
+            "db":   "qumulo_data",
             "user": "postgres",
             "pass": ""
             },
-"elastic": {"host": "pm1-10g.eng.qumulo.com",
+"elastic": {"host": "elasticdb.example.com",
         "index": "qumulo",
         "type": "qumulo_fs_activity"
         },
-"splunk": {"host": "pm1-10g.eng.qumulo.com",
+// you will need to enable the /services/collector/event in splunk and generate a token
+"splunk": {"host": "elasticdb.example.com",
         "token": "2ea5c4dd-dc73-4b89-af26-2ea6026d0d39",
         "event": "qumulo_fs_activity"
 },
 ```
+
+The configuration parameters are pretty self-explanatory and described below.
+
+```json
+"IOPS_THRESHOLD": 1, // the minimum total IOPS value per path+client required for being saved into the database
+"THROUGHPUT_THRESHOLD": 10000, // the minimum total throughput value per path+client required for being saved into the database
+"DIRECTORY_DEPTH_LIMIT": 4, // the maximum directory depth to be tracked in the paths
+"DIRECTORIES_ONLY": true, // only story directory names. if false then we go down to file names.
+"DEBUG": true // verbose logging
+```
+
