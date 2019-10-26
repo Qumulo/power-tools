@@ -52,7 +52,7 @@ Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on
 `python qupgrade.py --qhost product --quser admin --qpass secret --vers 2.9.0`
 
 
-## Add Qumulo activity to various databases.
+## Add Qumulo activity to various databases from the API
 
 We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to send activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
 
@@ -75,10 +75,12 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
 
 ```json
 "influx": {"host": "influxdb.example.com",
-            "db": "qumulo", // you'll need to create this in influx
+            // you'll need to create this db in influx
+            "db": "qumulo",
             "measurement": "qumulo_fs_activity"
             },
 "postgres": {"host": "db.example.com",
+            // you'll need to create or have this db in postgres
             "db":   "qumulo_data",
             "user": "postgres",
             "pass": ""
