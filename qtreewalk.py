@@ -51,7 +51,7 @@ def list_dir(rc, d, out_file=None):
             with gvars.done_queue_len.get_lock():
                 gvars.done_queue_len.value += 1
             # This is the call that gets run against each file and directory
-            do_per_file(ent, d['path'], out_file, rc)
+            do_per_file(ent, d, out_file, rc)
             if ent["type"] == "FS_FILE_TYPE_DIRECTORY" and int(ent["child_count"]) > 0:
                 add_to_queue({"path": d["path"] + ent["name"] + "/", "max_depth": d["max_depth"]})
 

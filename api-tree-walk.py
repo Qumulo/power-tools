@@ -3,8 +3,9 @@ import qtreewalk
 
 def do_per_file(ent, d, out_file=None, rc=None):
     """ent: attribute JSON
-       d: parent directory
+       d: parent directory attributes (d['path'] for the path)
        out_file: optional file handle for logging
+       rc: RestClient instance suitable for modifying data or metadata
     This is where we define what happens to each file encountered.
     The default behavior is to print and log file info.
     """
