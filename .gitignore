@@ -91,3 +91,9 @@ ENV/
 # Qumulo Core image files
 *.qimg
 config.json
+
+# PyCharm
+.idea/
+
+# Mac
+.DS_Store
