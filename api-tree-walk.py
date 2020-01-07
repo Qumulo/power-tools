@@ -1,7 +1,7 @@
 import qtreewalk
 
 
-def do_per_file(ent, d, out_file=None):
+def do_per_file(ent, d, out_file=None, rc=None):
     """ent: attribute JSON
        d: parent directory
        out_file: optional file handle for logging
