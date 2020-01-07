@@ -97,3 +97,4 @@ config.json
 
 # Mac
 .DS_Store
+file-list.txt
