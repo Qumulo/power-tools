@@ -257,8 +257,8 @@ class qumulo_api:
         self.rc = None
         self.creds = None
 
-    def login(self):
-        self.rc = RestClient(self.host, 8000)
+    def login(self, timeout=60):
+        self.rc = RestClient(self.host, 8000, timeout=timeout)
         self.rc.login(self.user, self.password)
 
     def test_login(self, host, user, password):
@@ -331,10 +331,10 @@ class qumulo_api:
             log_print("... Loading new Qumulo Software version: %s ..." %  qimg_path)
             try:
                 ####  10 second timeout for rest client while waiting.
-                self.login()
+                self.login(timeout=10)
                 version_data = self.get_current_version()
             except:
-                time.sleep(17)
+                time.sleep(10)
         err_msg = "Completed upgrade to %s"
         log_print(err_msg % version_data)
         log_print("-" * 80)
