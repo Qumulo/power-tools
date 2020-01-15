@@ -109,12 +109,16 @@ class qumulo_release_mgr:
             qimg_size = int(self.release_list[release]["qimg_size"])
             if is_cloud:
                 prefix = "cloud_"
+                if self.release_list[release]["qimg_size_cloud"] == '':
+                    log_print("Unable to download cloud release: %s" % self.release_list[release]['full_release'])
+                    sys.exit()
                 qimg_size = int(self.release_list[release]["qimg_size_cloud"])
             if is_hpe and self.release_list[release]["qimg_size_hpe"] != "":
                 prefix = "hpe_"
                 qimg_size = int(self.release_list[release]["qimg_size_hpe"])
             the_list.append({"release": self.release_list[release]['full_release']
-                            , "qimg": "qumulo_install_%s%s.qimg" % (prefix, self.release_list[release]['full_release'])
+                            , "qimg": "qumulo_install_%s%s.qimg" % (prefix, 
+                                                    self.release_list[release]['full_release'])
                             , "size": qimg_size
                             })
         return the_list
@@ -282,6 +286,8 @@ class qumulo_api:
         model_num = self.rc.cluster.list_node(1)["model_number"]
         model_num = model_num.lower()
         if 'aws' in model_num:
+            self.platform = 'cloud'
+        elif 'cloud' in model_num:
             self.platform = 'cloud'
         elif 'gcp' in model_num:
             self.platform = 'cloud'
