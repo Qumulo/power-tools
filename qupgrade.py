@@ -280,6 +280,7 @@ class qumulo_api:
 
     def get_platform(self):
         model_num = self.rc.cluster.list_node(1)["model_number"]
+        model_num = model_num.lower()
         if 'aws' in model_num:
             self.platform = 'cloud'
         elif 'gcp' in model_num:
