@@ -349,7 +349,7 @@ class qumulo_api:
     def upgrade_prepare(self, version, qimg_path):
         log_print("Preparing cluster for upgrade. Cluster will be fully available during this time.")
         try:
-            self.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_PREPARE', override_version=True)
+            self.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_PREPARE')
         except:
             exc = sys.exc_info()[1]
             log_print("!Fatal Error! Prepare exception: %s" % exc)
