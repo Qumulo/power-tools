@@ -138,6 +138,8 @@ class qumulo_release_mgr:
             if skipto:
                 if get_version_num(rel['main_release']) >= skipto:
                     skipto = None
+                else:
+                    pass
             if self.is_quarterly(rel['main_release']):
                 if self.get_next_q(rel['main_release']) <= end_num and self.get_next_q(rel['main_release']) is not None:
                     between_qs = True
@@ -153,7 +155,6 @@ class qumulo_release_mgr:
                 final_list.append(k)
                 # handle a few custom skips
                 if rel['skipto'] != '' and get_version_num(rel['skipto']) <= end_num:
-                    final_list.append(get_version_num(rel['skipto']))
                     skipto = get_version_num(rel['skipto'])
             is_first = False
 
