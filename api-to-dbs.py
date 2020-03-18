@@ -105,7 +105,7 @@ class QumuloActivityData:
 
         ips = list(set([d['ip'] for d in self.entries]))
         log("Resolving %s ips." % len(ips))
-        dd = self.qumulo_client.dns.resolve(ips)
+        dd = self.qumulo_client.dns.resolve_ips_to_names(ips)
         for d in dd:
             self.ips_to_hostnames[d['ip_address']] = d['hostname']
         log("Done resolving %s ips." % len(ips))
