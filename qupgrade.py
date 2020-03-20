@@ -117,7 +117,7 @@ class qumulo_release_mgr:
                 prefix = "hpe_"
                 qimg_size = int(self.release_list[release]["qimg_size_hpe"])
             the_list.append({"release": self.release_list[release]['full_release']
-                            , "qimg": "qumulo_install_%s%s.qimg" % (prefix, 
+                            , "qimg": "qumulo_upgrade_%s%s.qimg" % (prefix, 
                                                     self.release_list[release]['full_release'])
                             , "size": qimg_size
                             })
