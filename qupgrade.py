@@ -311,7 +311,10 @@ class qumulo_api:
                 self.rc.fs.create_directory(name=name, dir_path=dir_path)
             except:
                 e = sys.exc_info()[1]
-                log_print("Error creating directory '%s': %s" % (full_path, e))
+                if 'fs_entry_exists_error' in str(e):
+                    log_print("Directory exists: %s" % full_path)
+                else:
+                    log_print("Error creating directory '%s': %s" % (full_path, e))
     
     def file_exists(self, full_path, size = None):
         try:
