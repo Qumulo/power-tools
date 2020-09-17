@@ -141,7 +141,7 @@ class qumulo_release_mgr:
                 else:
                     pass
             if self.is_quarterly(rel['main_release']):
-                if self.get_next_q(rel['main_release']) <= end_num and self.get_next_q(rel['main_release']) is not None:
+                if self.get_next_q(rel['main_release']) is not None and self.get_next_q(rel['main_release']) <= end_num:
                     between_qs = True
                 else:
                     between_qs = False
@@ -318,7 +318,8 @@ class qumulo_api:
     
     def file_exists(self, full_path, size = None):
         try:
-            attr = self.rc.fs.get_attr(full_path)
+            print("Validating qimg file on cluster %s" % full_path)
+            attr = self.rc.fs.get_file_attr(full_path)
             if size and int(attr["size"]) != size:
                 log_print("File sizes different")
                 log_print("Expected size: %s - size on Qumulo: %s" % (size, attr["size"]))
@@ -333,7 +334,12 @@ class qumulo_api:
             log_print("Can't arm in state: %s" % resp['state'])
             sys.exit()
         log_print("Begin upgrade arm process.")
-        resp = self.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_ARM')
+        try:
+            resp = self.rc.upgrade.config_put(qimg_path, 'UPGRADE_TARGET_ARM')
+        except:
+            exc = sys.exc_info()[1]
+            time.sleep(20)
+
         msg = "Qumulo cluster armed with %s. Reloading Qumulo."
         log_print(msg % qimg_path)
         time.sleep(10)
