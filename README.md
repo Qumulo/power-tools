@@ -73,6 +73,19 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
 
 `sample-config.json` is currently only set up to save data to hourly csv files. If you want to send Qumulo data to other databases, here is the json configurations you can add to your `config.json`:
 
+Optional parameter for QUMULO_CLUSTERS: client_ip_regex
+
+Example:
+```json
+  "host": "product.example.com",
+  "user": "admin",
+  "password": ""
+  "client_ip_regex": "10.0.0.*"
+```
+client_ip_regex is a regex based filter for the clients accessing the Qumulo
+cluster. This allows for cleaning up metrics for only those clients that you
+are interested in storing metrics.
+
 ```json
 "influx": {"host": "influxdb.example.com",
             "db": "qumulo",
@@ -92,7 +105,7 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
         "event": "qumulo_fs_activity"
 },
 ```
-For the vaarious databases, you will need to have your own DB server set up to pass the data. You will also potentially need to create a new database withing the DB server. For splunk, you will need to enable the /services/collector/event in splunk and generate a token for the configuration file.
+For the various databases, you will need to have your own DB server set up to pass the data. You will also potentially need to create a new database withing the DB server. For splunk, you will need to enable the /services/collector/event in splunk and generate a token for the configuration file.
 
 
 The configuration parameters are pretty self-explanatory and described below.
