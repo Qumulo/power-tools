@@ -77,7 +77,12 @@ class QumuloActivityData:
         activity_data = self.qumulo_client.analytics.current_activity_get()
         self.current_timestamp = datetime.datetime.utcnow()
         self.current_epoch = int(time.time())
-        self.entries = activity_data['entries']
+        # Filter out client IPs based on regex in per-cluster config
+        self.entries = list()
+        client_ip_regex = self.cluster.get('client_ip_regex', '*')
+        for entry in activity_data['entries']:
+            if re.match(client_ip_regex, entry['ip']):
+                self.entries.append(entry)
         log("Successfully recieved %s activity entries." % len(self.entries))
 
 
@@ -92,11 +97,11 @@ class QumuloActivityData:
 
         check_ids = []
         pool = Pool(processes=10)
-        for file_id, data in self.ids_to_paths.iteritems():
+        for file_id, data in self.ids_to_paths.items():
             if data["path"] != "" and data["path"] != "/":
                 check_ids.append(file_id)
                 if len(check_ids) >= 100:
-                    pool.apply_async(QumuloActivityData.ids_to_attrs, (self.cluster, check_ids), callback=self.done_ids_to_attrs)
+                    pool.apply_async(QumuloActivityData.ids_to_attrs, (self.cluster, check_ids),callback=self.done_ids_to_attrs)
                     check_ids = []
         pool.apply_async(QumuloActivityData.ids_to_attrs, (self.cluster, check_ids), callback=self.done_ids_to_attrs)
         pool.close()
@@ -138,7 +143,7 @@ class QumuloActivityData:
 
     def prepare_data_for_dbs(self):
         log("Preparing data to add into databases and filter by iops/throughput")
-        for ip_and_path, data in self.combined_data.iteritems():
+        for ip_and_path, data in self.combined_data.items():
             if data['iops-total'] < self.IOPS_THRESHOLD and data['throughput-total'] < self.THROUGHPUT_THRESHOLD:
                 continue
             (ip, path) = ip_and_path.split(':', 1)
@@ -150,7 +155,7 @@ class QumuloActivityData:
                 ("path_levels", len(re.findall("/", path)) if path != '/' else 0 ),
                 ("timestamp", self.current_timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')),
             ])
-            for k, v in data.iteritems():
+            for k, v in data.items():
                 entry[k.replace('-', '_')] = int(v)
             self.new_db_entries.append(entry)
         log("%s entries ready for import to database(s)" % len(self.new_db_entries))
@@ -203,7 +208,7 @@ class QumuloActivityData:
         json_entries = []
         for d in self.new_db_entries:
             metrics_data = {}
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if k.replace('_', '-') in self.EMPTY_DATA:
                     metrics_data[k] = v
             entry = {
@@ -236,7 +241,7 @@ class QumuloActivityData:
                         ("path", d["path"]),
                         ("timestamp", self.current_timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')),
                     ])
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if k.replace('_', '-') in self.EMPTY_DATA:
                     entry[k] = v
             json_entries.append(entry)
@@ -263,7 +268,7 @@ class QumuloActivityData:
                             "path": d["path"],
                             }),
                     ])
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if k.replace('_', '-') in self.EMPTY_DATA:
                     entry['fields'][k] = v
             entries.append(str(json.dumps(entry)))
@@ -291,8 +296,9 @@ class QumuloActivityData:
         return inode_types
 
 
+    @staticmethod
     def done_ids_to_attrs(resolved_ids):
-        for inode_id, file_type in resolved_ids.iteritems():
+        for inode_id, file_type in resolved_ids.items():
             if file_type == 'FS_FILE_TYPE_DIRECTORY':
                 self.ids_to_paths[inode_id]["is-dir"] = True
 
@@ -304,11 +310,11 @@ if __name__ == "__main__":
     config_file = "config.json"
     try:
         conf = json.loads(open(config_file, "r").read())
-    except IOError, e:
+    except IOError as e:
         log("*** Error reading config file: %s" % config_file, True)
         log("*** Exception: %s" % e, True)
         sys.exit()
-    except ValueError, e:
+    except ValueError as e:
         log("*** Error parsing config file: %s" % config_file, True)
         log("*** Exception: %s" % e, True)
         sys.exit()
@@ -336,7 +342,7 @@ if __name__ == "__main__":
                 qad.load_data_into_elastic_search(DBS["elastic"])
             if "splunk" in DBS:
                 qad.load_data_into_splunk(DBS["splunk"])
-        except Exception, err:
+        except Exception as err:
             log("*** Exception ****", True)
             log(sys.exc_info()[0], True)
             log(sys.exc_info()[1], True)
