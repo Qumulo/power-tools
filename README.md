@@ -73,16 +73,19 @@ The `"QUMULO_CLUSTERS"` section allows for multiple Qumulo clusters to be tracke
 
 `sample-config.json` is currently only set up to save data to hourly csv files. If you want to send Qumulo data to other databases, here is the json configurations you can add to your `config.json`:
 
-Optional parameter for QUMULO_CLUSTERS: client_ip_regex
-
-Example:
 ```json
   "host": "product.example.com",
   "user": "admin",
   "password": ""
   "client_ip_regex": "10.0.0.*"
 ```
-client_ip_regex is a regex based filter for the clients accessing the Qumulo
+host (required): Hostname or IP of the Qumulo cluster API server
+
+user (required): Username of account with API access
+
+password (required): Password for API user
+
+client_ip_regex (optional): a regex based filter for the clients accessing the Qumulo
 cluster. This allows for cleaning up metrics for only those clients that you
 are interested in storing metrics.
 
