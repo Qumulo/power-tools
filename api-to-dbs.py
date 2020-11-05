@@ -17,6 +17,23 @@ def log(msg, override=False):
         t = datetime.datetime.utcnow()
         print("%s - %s" % (t.strftime('%Y-%m-%dT%H:%M:%SZ'), msg))
 
+PG_SETUP_SQL = """CREATE TABLE IF NOT EXISTS qumulo_activity(
+                qumulo_host VARCHAR(128),
+                client_ip VARCHAR(20),
+                client_hostname VARCHAR(256),
+                path VARCHAR(2048),
+                path_levels SMALLINT,
+                ts TIMESTAMP,
+                file_throughput_write FLOAT,
+                file_throughput_read FLOAT,
+                file_iops_write FLOAT,
+                file_iops_read FLOAT,
+                metadata_iops_write FLOAT,
+                metadata_iops_read FLOAT,
+                iops_total FLOAT,
+                throughput_total FLOAT
+                );"""
+
 class QumuloActivityData:
 
     def __init__(self, cluster, conf):
@@ -45,22 +62,6 @@ class QumuloActivityData:
             ('throughput-total', 0.0),
         ])
 
-        PG_SETUP_SQL = """CREATE TABLE qumulo_activity(
-                        qumulo_host VARCHAR(128),
-                        client_ip VARCHAR(20),
-                        client_hostname VARCHAR(256),
-                        path VARCHAR(2048),
-                        path_levels SMALLINT,
-                        ts TIMESTAMP,
-                        file_throughput_write FLOAT,
-                        file_throughput_read FLOAT,
-                        file_iops_write FLOAT,
-                        file_iops_read FLOAT,
-                        metadata_iops_write FLOAT,
-                        metadata_iops_read FLOAT,
-                        iops_total FLOAT,
-                        throughput_total FLOAT
-                        );"""
         self.ids_to_paths = {}
         self.ips_to_hostnames = {}
         self.combined_data = {}
@@ -79,7 +80,7 @@ class QumuloActivityData:
         self.current_epoch = int(time.time())
         # Filter out client IPs based on regex in per-cluster config
         self.entries = list()
-        client_ip_regex = self.cluster.get('client_ip_regex', '*')
+        client_ip_regex = self.cluster.get('client_ip_regex', '.*')
         for entry in activity_data['entries']:
             if re.match(client_ip_regex, entry['ip']):
                 self.entries.append(entry)
@@ -189,6 +190,8 @@ class QumuloActivityData:
         log("Load %s entries into postgres [%s/%s]" % (len(self.new_db_entries), pgdb["host"], pgdb["db"]))
         pg_str = "host=%s dbname=%s user=%s password=%s"
         pg_cn = psycopg2.connect(pg_str % (pgdb["host"], pgdb["db"], pgdb["user"], pgdb["pass"]))
+        with pg_cn.cursor() as curs:
+            curs.execute(PG_SETUP_SQL)
         file_name = "temp-import-file.txt"
         fw = open(file_name, "w")
         for d in self.new_db_entries:
@@ -197,6 +200,7 @@ class QumuloActivityData:
         cur = pg_cn.cursor()
         with open(file_name, 'r') as f:
             cur.copy_from(f, 'qumulo_activity', sep='|')
+        cur.close()
         pg_cn.commit()
         os.remove(file_name)
         log("Loaded %s entries into postgres [%s/%s]" % (len(self.new_db_entries), pgdb["host"], pgdb["db"]))
