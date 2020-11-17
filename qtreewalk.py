@@ -38,6 +38,7 @@ def list_dir(rc, d, out_file=None):
     global gvars
     next_page = "first"
     while next_page != "":
+        r = None
         if next_page == "first":
             try:
                 r = rc.fs.read_directory(path=d["path"], page_size=1000)
@@ -45,8 +46,9 @@ def list_dir(rc, d, out_file=None):
                 log("Error reading directory: %s" % d["path"])
                 next
         else:
-            r = rc.request("GET", r['paging']['next'])
-        next_page = r['paging']['next']
+            r = rc.request("GET", next_page)
+        if not r:
+            break
         for ent in r["files"]:
             with gvars.done_queue_len.get_lock():
                 gvars.done_queue_len.value += 1
@@ -54,6 +56,10 @@ def list_dir(rc, d, out_file=None):
             do_per_file(ent, d, out_file, rc)
             if ent["type"] == "FS_FILE_TYPE_DIRECTORY" and int(ent["child_count"]) > 0:
                 add_to_queue({"path": d["path"] + ent["name"] + "/", "max_depth": d["max_depth"]})
+        if 'paging' in r and 'next' in r['paging']:
+            next_page = r['paging']['next']
+        else:
+            next_page = ""
 
 
 def do_per_file(ent, d, out_file=None, rc=None):

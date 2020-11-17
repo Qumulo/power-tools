@@ -38,7 +38,7 @@ def do_per_file(ent, d, out_file=None, rc=None):
     """
     file_info = "%s%s\t%s\t%s" % \
                 (d['path'], ent['name'], ent['size'], ent['type'])
-    print file_info
+    # print(file_info)
     if out_file:
         out_file.write(file_info + '\n')
 
