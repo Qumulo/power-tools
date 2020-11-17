@@ -6,6 +6,7 @@ import time
 import math
 import requests
 import argparse
+from getpass import getpass
 from collections import OrderedDict
 
 try:
@@ -391,12 +392,13 @@ def upgrade_cluster():
     parser = argparse.ArgumentParser()
     parser.add_argument('--qhost', required=True, help='Qumulo hostname or ip address')
     parser.add_argument('--quser', required=True, help='Qumulo API user')
-    parser.add_argument('--qpass', required=True, help='Qumulo API password')
+    parser.add_argument('--qpass', required=False, help='Qumulo API password')
     parser.add_argument('--sharepass', help='Fileserver download password. Contact Qumulo for details')
     parser.add_argument('--vers', required=True, help='The Qumulo Core version to upgrade to. Valid values include: a version number (2.10.0), "latest" and "latest_quarterly"')
     parser.add_argument('--download-only', default=False, help='Do not perform upgrades, Only download qimg files from fileserver', action='store_true')
     args = parser.parse_args()
-
+    if not args.qpass:
+        args.qpass = getpass("Password for %s: " % args.quser)
     qr = qumulo_release_mgr()
     api = qumulo_api()
     api.test_login(args.qhost, args.quser, args.qpass)
