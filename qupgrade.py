@@ -6,6 +6,7 @@ import time
 import math
 import requests
 import argparse
+import traceback
 from getpass import getpass
 from collections import OrderedDict
 
@@ -278,6 +279,11 @@ class qumulo_api:
         except:
             log_print("Unable to connect to Qumulo Cluster %s via api" % host)
             log_print("Credentials used: username=%s, password=********" % user)
+            print("Exception details: %s - %s" % (sys.exc_info()[0], sys.exc_info()[1]))
+            print(traceback.format_exc())
+            log_print("Unable to connect to Qumulo Cluster %s via api" % host)
+            log_print("Credentials used: username=%s, password=********" % user)
+            sys.exit()
 
     def get_current_version(self):
         revision_id = self.rc.version.version()['revision_id']
