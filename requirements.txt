@@ -1,2 +1,2 @@
-qumulo-api
+qumulo-api==3.3.3
 requests

@@ -1,5 +1,5 @@
 ### Qumulo power tool requirements and setup
-* python 2.7
+* python 3.7 or python 2.7
 * `git clone https://github.com/Qumulo/power-tools`
 * `cd power-tools`
 
