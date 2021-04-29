@@ -92,7 +92,7 @@ class qumulo_release_mgr:
     def is_quarterly(self, vers):
         vers_num = get_version_num(vers)
         return ((vers_num / 100) % 100 == 0) and vers_num >= 2090000
-    
+
     def get_next_q(self, vers):
         vers_num = get_version_num(vers, True)
         in_list = False
@@ -119,12 +119,12 @@ class qumulo_release_mgr:
                 prefix = "hpe_"
                 qimg_size = int(self.release_list[release]["qimg_size_hpe"])
             the_list.append({"release": self.release_list[release]['full_release']
-                            , "qimg": "qumulo_upgrade_%s%s.qimg" % (prefix, 
+                            , "qimg": "qumulo_upgrade_%s%s.qimg" % (prefix,
                                                     self.release_list[release]['full_release'])
                             , "size": qimg_size
                             })
         return the_list
-        
+
     def get_path(self, start, end, is_hpe = False, is_cloud = False):
         start_num = get_version_num(start, True)
         end_num = get_version_num(end)
@@ -184,7 +184,7 @@ class qumulo_release_mgr:
         for i, d in enumerate(self.final_release_list):
             log_print("upgrade to: %s with qimg: %s" % (d['release'], d['qimg']))
             api.upgrade_to(d['release'], "%s/%s" % (UPGRADE_PATH, d['qimg']))
-            
+
     def download_qimgs(self, api, sharepass):
         for d in self.final_release_list:
             log_print("Downloading: %s" % d['qimg'])
@@ -200,7 +200,7 @@ class qumulo_release_mgr:
                 pass
             elif not file_exists_local and not file_exists_on_cluster:
                 download_file(d['qimg'], sharepass)
-            
+
             try:
                 api.rc.fs.create_file(dir_path=UPGRADE_PATH, name=d['qimg'])
             except:
@@ -209,17 +209,17 @@ class qumulo_release_mgr:
             with open(d['qimg'], 'rb') as fr:
                 api.rc.fs.write_file(path = '%s/%s' % (
                                                 UPGRADE_PATH,
-                                                d['qimg']), 
+                                                d['qimg']),
                                             data_file=fr)
             log_print("qimg loaded: %s/%s" % (UPGRADE_PATH, d['qimg']))
             os.remove(d['qimg'])
             log_print("delete local qimg: %s" % d['qimg'])
-    
+
     def is_valid_release(self, version):
         if version in self.valid_releases:
             return True
         return False
-                
+
     def upgrade_cluster(self, to_version, api, sharepass, download_only = False):
         if to_version == "latest":
             to_version = self.latest_release
@@ -230,7 +230,7 @@ class qumulo_release_mgr:
         elif to_version in self.valid_releases:
             to_version = self.valid_releases[to_version]
         else:
-            log_print("'%s' is not a valid Qumulo Core version" % args.vers)
+            log_print("'%s' is not a valid Qumulo Core version" % to_version)
             log_print("Exiting")
             sys.exit()
         if get_version_num(api.get_current_version()) >= get_version_num(to_version["full_release"]):
@@ -240,9 +240,9 @@ class qumulo_release_mgr:
             sys.exit()
         log_print("Upgrading from: %s" % api.get_current_version())
         log_print("Upgrading to:   %s" % to_version["full_release"])
-        self.get_path(api.get_current_version(), 
+        self.get_path(api.get_current_version(),
                       to_version['full_release'],
-                      is_hpe = True if api.get_platform() == 'hpe' else False, 
+                      is_hpe = True if api.get_platform() == 'hpe' else False,
                       is_cloud = True if api.get_platform() == 'cloud' else False)
         log_print("The upgrade steps will include:")
         self.print_qimg_list()
@@ -322,7 +322,7 @@ class qumulo_api:
                     log_print("Directory exists: %s" % full_path)
                 else:
                     log_print("Error creating directory '%s': %s" % (full_path, e))
-    
+
     def file_exists(self, full_path, size = None):
         try:
             print("Validating qimg file on cluster %s" % full_path)

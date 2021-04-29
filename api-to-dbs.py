@@ -128,7 +128,7 @@ class QumuloActivityData:
                 if shorter_path[-1] == '/':
                     shorter_path = shorter_path[:-1]
             ip_and_path = d['ip'] + ':' + shorter_path
-            if self.DIRECTORIES_ONLY and not path_info["is-dir"] and shorter_path != '/':        
+            if self.DIRECTORIES_ONLY and not path_info["is-dir"] and shorter_path != '/':
                 ip_and_path = re.sub(r'/[^/]+$', '', ip_and_path)
             if ip_and_path[-1] == ":":
                 ip_and_path = ip_and_path + "/"
@@ -277,8 +277,8 @@ class QumuloActivityData:
                     entry['fields'][k] = v
             entries.append(str(json.dumps(entry)))
         entries = '\n'.join(entries)
-        resp = requests.post('https://%s:8088/services/collector/event' % splk['host'], 
-                        auth=('x', splk['token']), 
+        resp = requests.post('https://%s:8088/services/collector/event' % splk['host'],
+                        auth=('x', splk['token']),
                         data=entries,
                         verify=False, )
         log("Splunk response: %s" % resp.text)
@@ -300,8 +300,7 @@ class QumuloActivityData:
         return inode_types
 
 
-    @staticmethod
-    def done_ids_to_attrs(resolved_ids):
+    def done_ids_to_attrs(self, resolved_ids):
         for inode_id, file_type in resolved_ids.items():
             if file_type == 'FS_FILE_TYPE_DIRECTORY':
                 self.ids_to_paths[inode_id]["is-dir"] = True
