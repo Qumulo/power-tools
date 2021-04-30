@@ -1,11 +1,10 @@
 import argparse
+import glob
 import multiprocessing
 
 from dataclasses import dataclass
-from typing import BinaryIO
+from typing import Any, BinaryIO, Mapping
 from qumulo.rest_client import RestClient
-
-import qtreewalk
 
 
 MAX_DEPTH = 5
@@ -13,20 +12,15 @@ NUM_WORKERS = 16
 PAGE_SIZE = 1000
 REST_PORT = 8000
 
+
 @dataclass
 class Directory:
     path: str
     max_depth: int
 
 
-@dataclass
 class FileEntry:
-    name: str
-    size: int
-    file_type: str
-    child_count: int
-
-    def __init__(self, entry_dict):
+    def __init__(self, entry_dict: Mapping[str, Any]):
         self.name = entry_dict['name']
         self.size = entry_dict['size']
         self.file_type = entry_dict['file_type']
@@ -39,9 +33,13 @@ class FileEntry:
         return self.child_count > 0
 
 
-def read_file_attributes(directory: Directory, entry: FileEntry, out_file: BinaryIO) -> None:
+def read_file_attributes(
+    directory: Directory,
+    entry: FileEntry,
+    out_file: BinaryIO
+) -> None:
     """
-    Read any pertinent file attributes from the Entry JSON into the output file.
+    Read any pertinent file attributes from the Entry JSON into the output file
 
     Here is a sample Entry, if you want to read additional attributes:
     {
@@ -70,8 +68,9 @@ def read_file_attributes(directory: Directory, entry: FileEntry, out_file: Binar
         'type': 'FS_FILE_TYPE_FILE'
     }
     """
-    file_info = f"{directory.path}{entry.name}\t{entry.size}\t{entry.file_type}\n"
-    out_file.write(file_info)
+    out_file.write(
+        f"{directory.path}{entry.name}\t{entry.size}\t{entry.file_type}\n"
+    )
 
 
 def read_all_file_attributes_in_dir(
@@ -80,8 +79,12 @@ def read_all_file_attributes_in_dir(
     out_file: BinaryIO,
     worker_queue: multiprocessing.JoinableQueue
 ) -> None:
-    """Write attributes from each file in the given directory, recursively, to the out_file"""
-    response = rest_client.fs.read_directory(path=directory.path, page_size=PAGE_SIZE)
+    """
+    Write attributes from each file in the given directory, recursively, to the
+    out_file
+    """
+    response = rest_client.fs.read_directory(
+            path=directory.path, page_size=PAGE_SIZE)
 
     while response:
         for entry_dict in response['files']:
@@ -89,25 +92,36 @@ def read_all_file_attributes_in_dir(
             read_file_attributes(directory, entry, out_file)
 
             if entry.is_directory() and entry.has_children():
-                next_dir = Directory(f"{directory.path}{entry.name}/", directory.max_depth)
+                next_dir = Directory(
+                        f"{directory.path}{entry.name}/", directory.max_depth)
                 worker_queue.put(next_dir)
 
         if 'paging' in response and 'next' in response['paging']:
             response = rest_client.request("GET", response['paging']['next'])
 
 
-def worker_main(rest_client: RestClient, worker_queue: multiprocessing.JoinableQueue) -> None:
+def worker_main(
+    rest_client: RestClient,
+    worker_queue: multiprocessing.JoinableQueue
+) -> None:
     proc = multiprocessing.current_process()
 
     with open(f"out-{proc.pid}.txt", "wb") as out_file:
         while True:
             directory = worker_queue.get(block=True)
-            read_all_file_attributes_in_dir(rest_client, directory, out_file, worker_queue)
+            read_all_file_attributes_in_dir(
+                    rest_client, directory, out_file, worker_queue)
             worker_queue.task_done()
 
 
 class ApiTreeWalker:
-    def __init__(self, host: str, username: str, password: str, rest_client: RestClient):
+    def __init__(
+        self,
+        host: str,
+        username: str,
+        password: str,
+        rest_client: RestClient
+    ):
         self.host = host
         self.username = username
         self.password = password
@@ -115,7 +129,10 @@ class ApiTreeWalker:
 
         self.worker_queue = multiprocessing.JoinableQueue()
         self.workers = multiprocessing.Pool(
-                NUM_WORKERS, worker_main, (rest_client.clone(), self.worker_queue))
+            NUM_WORKERS,
+            worker_main,
+            (rest_client.clone(), self.worker_queue)
+        )
 
     def walk_tree(self, start_path: str, out_file_path: str) -> None:
         """Walk the entire Qumulo cluster, starting from start_path"""
@@ -135,12 +152,42 @@ class ApiTreeWalker:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Recursive parallel tree walk with Qumulo API')
-    parser.add_argument('-d', '--starting-directory', required=False, help='Starting directory', default='/')
-    parser.add_argument('-o', '--out-file-path', required=False, help='Path to output file to dump results', default='file-list.txt')
-    parser.add_argument('-p', '--password', required=True, help='Qumulo API password')
-    parser.add_argument('-s', '--host', required=True, help='Qumulo cluster ip/hostname')
-    parser.add_argument('-u', '--username', required=False, help='Qumulo API password', default='admin')
+    parser = argparse.ArgumentParser(
+        description='Recursive parallel tree walk with Qumulo API'
+    )
+    parser.add_argument(
+        '-d',
+        '--starting-directory',
+        required=False,
+        help='Starting directory',
+        default='/'
+    )
+    parser.add_argument(
+        '-o',
+        '--out-file-path',
+        required=False,
+        help='Path to output file to dump results',
+        default='file-list.txt'
+    )
+    parser.add_argument(
+        '-p',
+        '--password',
+        required=True,
+        help='Qumulo API password'
+    )
+    parser.add_argument(
+        '-s',
+        '--host',
+        required=True,
+        help='Qumulo cluster ip/hostname'
+    )
+    parser.add_argument(
+        '-u',
+        '--username',
+        required=False,
+        help='Qumulo API password',
+        default='admin'
+    )
     return parser.parse_args()
 
 
@@ -150,8 +197,9 @@ def main() -> None:
     rest_client = RestClient(args.host, REST_PORT)
     rest_client.login(args.username, args.password)
 
-    tree_walker = ApiTreeWalker(args.host, args.username, args.password, rest_client)
-    tree_walker.walk_tree(args.starting_directory, argrs.out_file)
+    tree_walker = ApiTreeWalker(
+            args.host, args.username, args.password, rest_client)
+    tree_walker.walk_tree(args.starting_directory, args.out_file)
 
 
 if __name__ == '__main__':
