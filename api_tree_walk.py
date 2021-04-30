@@ -23,7 +23,7 @@ class FileEntry:
     def __init__(self, entry_dict: Mapping[str, Any]):
         self.name = entry_dict['name']
         self.size = entry_dict['size']
-        self.file_type = entry_dict['file_type']
+        self.file_type = entry_dict['type']
         self.child_count = entry_dict['child_count']
 
     def is_directory(self) -> bool:
@@ -69,7 +69,7 @@ def read_file_attributes(
     }
     """
     out_file.write(
-        f"{directory.path}{entry.name}\t{entry.size}\t{entry.file_type}\n"
+        f"{directory.path}{entry.name}\t{entry.size}\t{entry.file_type}\n".encode('utf-8')
     )
 
 
@@ -199,7 +199,7 @@ def main() -> None:
 
     tree_walker = ApiTreeWalker(
             args.host, args.username, args.password, rest_client)
-    tree_walker.walk_tree(args.starting_directory, args.out_file)
+    tree_walker.walk_tree(args.starting_directory, args.out_file_path)
 
 
 if __name__ == '__main__':
