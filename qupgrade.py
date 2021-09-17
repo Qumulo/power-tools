@@ -304,15 +304,16 @@ class qumulo_api:
         self.creds = None
 
     def login(self, timeout=60):
-        self.rc = RestClient(self.host, 8000, timeout=timeout)
+        self.rc = RestClient(self.host, self.port, timeout=timeout)
         self.rc.login(self.user, self.password)
 
-    def test_login(self, host, user, password):
+    def test_login(self, host, port, user, password):
         log_print("Logging into Qumulo Cluster [%s]" % host)
         try:
             self.host = host
             self.user = user
             self.password = password
+            self.port = port
             self.login()
             log_print("Login succesful")
         except:
@@ -518,6 +519,7 @@ def upgrade_cluster():
     parser.add_argument("--qhost", required=True, help="Qumulo hostname or ip address")
     parser.add_argument("--quser", required=True, help="Qumulo API user")
     parser.add_argument("--qpass", required=False, help="Qumulo API password")
+    parser.add_argument("--qport", default=8000, help="Qumulo REST port")
     parser.add_argument(
         "--sharepass", help="Fileserver download password. Contact Qumulo for details"
     )
@@ -537,7 +539,7 @@ def upgrade_cluster():
         args.qpass = getpass("Password for %s: " % args.quser)
     qr = qumulo_release_mgr()
     api = qumulo_api()
-    api.test_login(args.qhost, args.quser, args.qpass)
+    api.test_login(args.qhost, args.qport, args.quser, args.qpass)
     qr.upgrade_cluster(
         args.vers, api, sharepass=args.sharepass, download_only=args.download_only
     )
