@@ -1,5 +1,5 @@
 ### Qumulo power tool requirements and setup
-* python 3.7 or python 2.7
+* python 3.6+
 * `git clone https://github.com/Qumulo/power-tools`
 * `cd power-tools`
 
@@ -56,7 +56,7 @@ Upgrade to 2.9.0 without downloading, assuming you already have the qimg file on
 
 We know you're excited to get your Qumulo API data into your centralized databases and monitoring systems. Use this script to send activity (throughput, data and metadata IOPS) by path and client into influx, elastic search, postgres, splunk, and/or csv.
 
-1. Install the python 2.7 prequisites. `pip install qumulo_api`
+1. Install the python 3 prequisites. `pip3 install qumulo_api`
 2. Copy `sample-config.json` to `config.json` and then specify your databases and Qumulo clusters you wish to use in the new `config.json` file.
 3. run `python api-to-dbs.py` to confirm everything works.
 4. Add the `python api-to-dbs.py` command to your crontab to run every 1 or two minutes with something like:
