@@ -477,7 +477,10 @@ class qumulo_api:
 
     def upgrade_status(self):
         resp = self.rc.request("GET", "/v1/upgrade/status")
-        log_print("%(state)s - %(error_state)s" % resp)
+
+        state = resp["state"]
+        error_state = resp["error_state"]
+        log_print(f"{state} - {error_state}")
         if "error_message" in resp and resp["error_message"] != "":
             log_print("%s" % resp["error_message"].strip())
             sys.exit()

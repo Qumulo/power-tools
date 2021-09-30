@@ -75,6 +75,10 @@ class QUpgradeVersionTest(unittest.TestCase):
     def test_upgrade_uses_old_api(self):
         target_version = "4.1.0.1"
 
+        self.api.rc.request.return_value = {
+            "state": "UPGRADE_PREPARED",
+            "error_state": ""
+        }
         self.api.rc.version.version.return_value = {
             "revision_id": "Qumulo Core 4.1.0.1"
         }
