@@ -70,7 +70,7 @@ class QUpgradeVersionTest(unittest.TestCase):
         self.api = qumulo_api()
         self.api.rc = Mock(spec=RestClient)
         self.api.login = Mock(spec=self.api.login)
-        self.api.test_login("host", "user", "password")
+        self.api.test_login("host", "port", "user", "password")
 
     def test_upgrade_uses_old_api(self):
         target_version = "4.1.0.1"
