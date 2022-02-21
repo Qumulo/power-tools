@@ -27,6 +27,13 @@ class QupgradeTest(unittest.TestCase):
         assert qr.get_next_q("2.9.0") == 2100000
         assert qr.get_next_q("2.12.4") == 2130000
 
+    def test_is_quarterly(self):
+        global qr
+        assert qr.is_quarterly("4.0.0.2") == True
+        assert qr.is_quarterly("4.3.0") == True
+        assert qr.is_quarterly("5.0.0.1") == True
+        assert qr.is_quarterly("5.0.1") == False
+
     def test_upgrade_regular(self):
         global qr
         qr.get_path("2.12.2", "2.13.2")
