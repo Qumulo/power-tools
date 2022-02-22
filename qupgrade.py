@@ -105,7 +105,7 @@ class qumulo_release_mgr:
         self.latest_quarterly_release = sorted_quarterly_releases[-1]
 
     def is_quarterly(self, vers):
-        vers_num = get_version_num(vers)
+        vers_num = get_version_num(vers, True)
         return ((vers_num / 100) % 100 == 0) and vers_num >= 2090000
 
     def get_next_q(self, vers):
