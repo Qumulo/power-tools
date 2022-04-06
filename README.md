@@ -1,6 +1,6 @@
 # Deprecation Notice
 
-This software will shortly be deprecated and archived. If you have any issues, please reach out to [Michael Kade](mailto:mkade@qumulo.com) directly.
+**This software will shortly be deprecated and archived. If you have any issues, please reach out to [Michael Kade](mailto:mkade@qumulo.com) directly.**
 
 ### Qumulo power tool requirements and setup
 * python 3.6+
