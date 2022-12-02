@@ -28,6 +28,12 @@ def log_print(msg):
     print("%s | %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg))
 
 
+def exit_failure(message=None):
+    if message is not None:
+        log_print(message)
+    sys.exit(1)
+
+
 def get_version_num(vers, release_only=False):
     parts = vers.split(".")
     if len(parts) == 3:
@@ -45,10 +51,9 @@ def download_file(qimg, sharepass):
         allow_redirects=False,
     )
     if rsp.status_code == 404:
-        log_print(
+        exit_failure(
             "Unable to download qimg file. Please check the --sharepass password."
         )
-        sys.exit()
     rsp = requests.get(rsp.headers["Location"], stream=True)
     file_size = int(rsp.headers["content-length"])
     perc = int(file_size * 0.05)
@@ -127,11 +132,10 @@ class qumulo_release_mgr:
             if is_cloud:
                 prefix = "cloud_"
                 if self.release_list[release]["qimg_size_cloud"] == "":
-                    log_print(
+                    exit_failure(
                         "Unable to download cloud release: %s"
                         % self.release_list[release]["full_release"]
                     )
-                    sys.exit()
                 qimg_size = int(self.release_list[release]["qimg_size_cloud"])
             if is_hpe and self.release_list[release]["qimg_size_hpe"] != "":
                 prefix = "hpe_"
@@ -261,8 +265,7 @@ class qumulo_release_mgr:
             to_version = self.valid_releases[to_version]
         else:
             log_print("'%s' is not a valid Qumulo Core version" % to_version)
-            log_print("Exiting")
-            sys.exit()
+            exit_failure("Exiting")
         if get_version_num(api.get_current_version()) >= get_version_num(
             to_version["full_release"]
         ):
@@ -271,8 +274,7 @@ class qumulo_release_mgr:
                 "Cluster %s >= %s specified"
                 % (api.get_current_version(), to_version["full_release"])
             )
-            log_print("Exiting")
-            sys.exit()
+            exit_failure("Exiting")
         log_print("Upgrading from: %s" % api.get_current_version())
         log_print("Upgrading to:   %s" % to_version["full_release"])
         self.get_path(
@@ -323,7 +325,7 @@ class qumulo_api:
             print(traceback.format_exc())
             log_print("Unable to connect to Qumulo Cluster %s via api" % host)
             log_print("Credentials used: username=%s, password=********" % user)
-            sys.exit()
+            exit_failure()
 
     def get_current_version(self):
         revision_id = self.rc.version.version()["revision_id"]
@@ -380,8 +382,7 @@ class qumulo_api:
     def upgrade_arm(self, qimg_path):
         status = self.upgrade_status()
         if status != "UPGRADE_STATE_PREPARED":
-            log_print("Can't arm in state: %s" % status)
-            sys.exit()
+            exit_failure("Can't arm in state: %s" % status)
         log_print("Begin upgrade arm process.")
         try:
             self.rc.request(
@@ -412,8 +413,7 @@ class qumulo_api:
     def upgrade_v2_arm(self, qimg_path):
         status = self.upgrade_v2_status()
         if status != "UPGRADE_STATE_PREPARED":
-            log_print("Can't arm in state: %s" % status)
-            sys.exit()
+            exit_failure("Can't arm in state: %s" % status)
         log_print("Begin upgrade arm process.")
         try:
             resp = self.rc.upgrade_v2.commit()
@@ -449,8 +449,7 @@ class qumulo_api:
             )
         except:
             exc = sys.exc_info()[1]
-            log_print("!Fatal Error! Prepare exception: %s" % exc)
-            sys.exit()
+            exit_failure("!Fatal Error! Prepare exception: %s" % exc)
         status = self.upgrade_status()
         while status == "UPGRADE_STATE_PREPARING":
             log_print("Preparing...")
@@ -466,8 +465,7 @@ class qumulo_api:
             self.rc.upgrade_v2.prepare(qimg_path, auto_commit=False)
         except:
             exc = sys.exc_info()[1]
-            log_print("!Fatal Error! Prepare exception: %s" % exc)
-            sys.exit()
+            exit_failure("!Fatal Error! Prepare exception: %s" % exc)
         status = self.upgrade_v2_status()
         while status == "UPGRADE_STATE_PREPARING":
             log_print("Preparing...")
@@ -482,15 +480,13 @@ class qumulo_api:
         error_state = resp["error_state"]
         log_print(f"{state} - {error_state}")
         if "error_message" in resp and resp["error_message"] != "":
-            log_print("%s" % resp["error_message"].strip())
-            sys.exit()
+            exit_failure("%s" % resp["error_message"].strip())
         return resp["state"].replace("UPGRADE_", "UPGRADE_STATE_")
 
     def upgrade_v2_status(self):
         resp = self.rc.upgrade_v2.status()
         if resp.get("error_info", None) is not None:
-            log_print("%s" % resp["error_info"].strip())
-            sys.exit()
+            exit_failure("%s" % resp["error_info"].strip())
         return resp["state"]
 
     def upgrade_to(self, version, qimg_path):
@@ -512,7 +508,7 @@ class qumulo_api:
         #         log_print("%s" % resp["error_message"].strip())
         #     if "is_blocked" in resp and resp["is_blocked"]:
         #         log_print("Upgrade blocked: %(blocked_reason)s" % resp)
-        #     sys.exit()
+        #     exit_failure()
         upgrade_prepare(version, qimg_path)
         upgrade_arm(qimg_path)
 
